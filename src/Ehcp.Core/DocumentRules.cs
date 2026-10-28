@@ -3,13 +3,15 @@ namespace Ehcp.Core;
 public static class DocumentRules
 {
     public const int EmailTtlSeconds = 30 * 24 * 60 * 60;
+
     public static int EmailTtl(EmailDocument email) =>
         email.Children.Any(c => c.Status == ChildStatus.Folded) ? -1 : EmailTtlSeconds;
 
     public static void ValidateId(string? id)
     {
         if (string.IsNullOrWhiteSpace(id) || id.Length > 512 || id.Any(c => char.IsControl(c) || "/\\?#".Contains(c)))
-            throw new DocumentValidationException("Identifiers must be nonempty, at most 512 characters, and Cosmos-safe (no /, \\, ?, or #).");
+            throw new DocumentValidationException(
+                "Identifiers must be nonempty, at most 512 characters, and Cosmos-safe (no /, \\, ?, or #).");
     }
 
     public static void Validate(EmailDocument document)
@@ -41,7 +43,8 @@ public static class DocumentRules
     {
         ValidateId(document.Id);
         if (document.Id != document.EntityId)
-            throw new DocumentValidationException("Case id must equal entityId; caseId is the separate Synergy reference.");
+            throw new DocumentValidationException(
+                "Case id must equal entityId; caseId is the separate Synergy reference.");
         Required(document.Name, "name");
         ValidateFields(document.Relationships, document.Attributes);
         RequireList(document.Communications, "communications");
@@ -52,6 +55,7 @@ public static class DocumentRules
             if (!Enum.IsDefined(item.Direction) || item.ReceivedDateTime == default)
                 throw new DocumentValidationException("Invalid communication direction or receivedDateTime.");
         }
+
         foreach (var item in document.Conflicts)
         {
             ValidateId(item.EmailId);
@@ -60,37 +64,48 @@ public static class DocumentRules
         }
     }
 
-    private static void ValidateFields(IReadOnlyList<Relationship> relationships, IReadOnlyList<CaseAttribute> attributes)
+    private static void ValidateFields(IReadOnlyList<Relationship> relationships,
+        IReadOnlyList<CaseAttribute> attributes)
     {
         RequireList(relationships, "relationships");
         RequireList(attributes, "attributes");
         foreach (var item in relationships)
         {
-            Required(item.Type, "relationship.type"); Required(item.Name, "relationship.name");
-            Band(item.ConfidenceBand); Status(item.UserStatus);
+            Required(item.Type, "relationship.type");
+            Required(item.Name, "relationship.name");
+            Band(item.ConfidenceBand);
+            Status(item.UserStatus);
         }
+
         foreach (var item in attributes)
         {
-            Required(item.Type, "attribute.type"); Required(item.Value, "attribute.value");
-            Band(item.ConfidenceBand); Status(item.UserStatus);
+            Required(item.Type, "attribute.type");
+            Required(item.Value, "attribute.value");
+            Band(item.ConfidenceBand);
+            Status(item.UserStatus);
         }
     }
+
     private static void Required(string? value, string field)
     {
         if (string.IsNullOrWhiteSpace(value)) throw new DocumentValidationException($"{field} is required.");
     }
+
     private static void RequireList<T>(IReadOnlyList<T>? values, string field)
     {
         if (values is null || values.Any(v => v is null))
             throw new DocumentValidationException($"{field} must be an array without null entries.");
     }
+
     private static void Band(ConfidenceBand band)
     {
         if (!Enum.IsDefined(band)) throw new DocumentValidationException("Invalid confidence band.");
     }
+
     private static void Status(UserStatus? status)
     {
-        if (status is not null && !Enum.IsDefined(status.Value)) throw new DocumentValidationException("Invalid userStatus.");
+        if (status is not null && !Enum.IsDefined(status.Value))
+            throw new DocumentValidationException("Invalid userStatus.");
     }
 }
 

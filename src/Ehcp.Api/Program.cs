@@ -2,16 +2,20 @@ using System.Text.Json.Serialization;
 using Ehcp.Api;
 using Ehcp.Core;
 using Ehcp.Infrastructure;
+
 // using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Cosmos;
+
 // using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 var cosmos = builder.Configuration.GetSection("Cosmos").Get<CosmosSettings>() ?? new();
-if (!cosmos.IsValid()) throw new InvalidOperationException("Configure Cosmos endpoint, key, database and distinct mailbox containers. For local development, set Cosmos__Key to the key from the running emulator.");
+if (!cosmos.IsValid())
+    throw new InvalidOperationException(
+        "Configure Cosmos endpoint, key, database and distinct mailbox containers. For local development, set Cosmos__Key to the key from the running emulator.");
 builder.Services.AddSingleton(cosmos);
 builder.Services.AddSingleton(_ => new CosmosClient(cosmos.Endpoint, cosmos.Key, new CosmosClientOptions
 {
@@ -84,17 +88,18 @@ builder.Services.AddOpenApi(options =>
     {
         document.Info.Title = "EHCP Application API";
         document.Info.Version = "1.0.0";
-        // FUTURE AUTH: no bearer requirement in the local OpenAPI contract.
-//         document.Components ??= new();
-//         document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
-//         document.Components.SecuritySchemes["Bearer"] = new OpenApiSecurityScheme
-//         { Type = SecuritySchemeType.Http, Scheme = "bearer", BearerFormat = "JWT",
-//             Description = "Entra access token: StandardUser plus configured mailbox role; writes also require DataWriter." };
-//         document.Security = [new OpenApiSecurityRequirement
-//         { [new OpenApiSecuritySchemeReference("Bearer", document)] = [] }];
+        //         FUTURE AUTH: no bearer requirement in the local OpenAPI contract.
+        //         document.Components ??= new();
+        //         document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
+        //         document.Components.SecuritySchemes["Bearer"] = new OpenApiSecurityScheme
+        //         { Type = SecuritySchemeType.Http, Scheme = "bearer", BearerFormat = "JWT",
+        //             Description = "Entra access token: StandardUser plus configured mailbox role; writes also require DataWriter." };
+        //         document.Security = [new OpenApiSecurityRequirement
+        //         { [new OpenApiSecuritySchemeReference("Bearer", document)] = [] }];
         return Task.CompletedTask;
     });
 });
+
 var app = builder.Build();
 app.UseExceptionHandler();
 // app.UseAuthentication();
@@ -112,10 +117,16 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.MapScalarApiReference(options => options.Title = "EHCP API");
 }
+
 if (cosmos.Initialize)
 {
-    if (!app.Environment.IsDevelopment()) throw new InvalidOperationException("Provision production containers through deployment tooling.");
+    if (!app.Environment.IsDevelopment())
+        throw new InvalidOperationException("Provision production containers through deployment tooling.");
     await CosmosInitializer.InitializeAsync(app.Services.GetRequiredService<CosmosClient>(), cosmos);
 }
+
 app.Run();
-public partial class Program { }
+
+public partial class Program
+{
+}

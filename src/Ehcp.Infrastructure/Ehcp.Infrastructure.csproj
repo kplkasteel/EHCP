@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <ProjectReference Include="../Ehcp.Core/Ehcp.Core.csproj" />
-    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.54.0" />
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.63.3" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 </Project>

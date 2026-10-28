@@ -45,7 +45,7 @@ public sealed class ApiTests
         Assert.Equal(HttpStatusCode.NoContent, (await client.SendAsync(delete)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync(url + "/example")).StatusCode);
     }
-    [Fact] public async Task OpenApiIsVersionThreeZeroAndHasAllEightOperations()
+    [Fact] public async Task OpenApiIsVersionThreeZeroAndHasAllNineOperations()
     {
         await using var factory = new ApiFactory();
         using var json = JsonDocument.Parse(await factory.CreateClient().GetStringAsync("/openapi/v1.json"));
@@ -53,7 +53,7 @@ public sealed class ApiTests
         if (json.RootElement.TryGetProperty("components", out var components))
             Assert.False(components.TryGetProperty("securitySchemes", out var schemes) && schemes.EnumerateObject().Any());
         Assert.StartsWith("3.0.", json.RootElement.GetProperty("openapi").GetString());
-        Assert.Equal(8, json.RootElement.GetProperty("paths").EnumerateObject()
+        Assert.Equal(9, json.RootElement.GetProperty("paths").EnumerateObject()
             .Sum(path => path.Value.EnumerateObject().Count(p => new[] { "get", "post", "put", "delete" }.Contains(p.Name))));
     }
     private static readonly EmailDocument Example = new("example", "thread", Direction.inbound, DateTimeOffset.UtcNow, []);
@@ -66,6 +66,8 @@ internal sealed class ApiFactory : WebApplicationFactory<Program>
         builder.UseEnvironment("Development");
         builder.UseSetting("Cosmos:Key", "test-not-used");
         builder.UseSetting("Cosmos:Initialize", "false");
+        builder.UseSetting("Cosmos:Mailboxes:ehcp-team-shared:EmailsContainer", "ehcp-emails");
+        builder.UseSetting("Cosmos:Mailboxes:ehcp-team-shared:CasesContainer", "ehcp-cases");
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<IDocumentStore<EmailDocument>>();
