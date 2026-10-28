@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Cosmos;
 // using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 var cosmos = builder.Configuration.GetSection("Cosmos").Get<CosmosSettings>() ?? new();
@@ -98,8 +99,19 @@ var app = builder.Build();
 app.UseExceptionHandler();
 // app.UseAuthentication();
 // app.UseAuthorization();
+app.MapGet("/", () => Results.Ok(new
+{
+    name = "EHCP API",
+    status = "ok",
+    openApi = app.Environment.IsDevelopment() ? "/openapi/v1.json" : null,
+    documentation = app.Environment.IsDevelopment() ? "/scalar/v1" : null
+}));
 app.MapControllers();
-if (app.Environment.IsDevelopment()) app.MapOpenApi();
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference(options => options.Title = "EHCP API");
+}
 if (cosmos.Initialize)
 {
     if (!app.Environment.IsDevelopment()) throw new InvalidOperationException("Provision production containers through deployment tooling.");
