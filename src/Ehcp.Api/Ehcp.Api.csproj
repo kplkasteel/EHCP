@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup><UserSecretsId>ehcp-api-local-development</UserSecretsId></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Ehcp.Core/Ehcp.Core.csproj" />
+    <ProjectReference Include="../Ehcp.Infrastructure/Ehcp.Infrastructure.csproj" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.13" />
+    <!-- FUTURE AUTH: uncomment when re-enabling authentication.
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.13" />
+    -->
+  </ItemGroup>
+</Project>

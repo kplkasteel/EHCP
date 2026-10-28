@@ -1,0 +1,12 @@
+{
+  "id": "child-example-a1b2",
+  "entityId": "child-example-a1b2",
+  "name": "Example Child",
+  "caseId": "EHC-2024-0456",
+  "nhsNumber": null,
+  "dateOfBirth": "2016-03-14",
+  "relationships": [],
+  "attributes": [],
+  "communications": [],
+  "conflicts": []
+}

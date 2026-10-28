@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Ehcp.Core/Ehcp.Core.csproj" />
+    <Project Path="src/Ehcp.Infrastructure/Ehcp.Infrastructure.csproj" />
+    <Project Path="src/Ehcp.Api/Ehcp.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Ehcp.Tests/Ehcp.Tests.csproj" />
+    <Project Path="tests/Ehcp.IntegrationTests/Ehcp.IntegrationTests.csproj" />
+  </Folder>
+</Solution>
