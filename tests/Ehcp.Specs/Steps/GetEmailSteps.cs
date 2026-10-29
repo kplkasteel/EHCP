@@ -12,14 +12,13 @@ namespace Ehcp.Specs.Steps;
 [Binding]
 public sealed class GetEmailSteps : IDisposable
 {
-    private const string MailboxId = "ehcp-team-shared";
+    private string mailboxId = string.Empty;
 
     private readonly CosmosSettings settings = new()
     {
         Endpoint = Environment.GetEnvironmentVariable("Cosmos__Endpoint") ?? "https://localhost:8081",
         Key = Environment.GetEnvironmentVariable("Cosmos__Key") ?? new CosmosSettings().Key,
-        Database = Environment.GetEnvironmentVariable("Cosmos__Database") ?? "ehcp-local",
-        Mailboxes = new() { [MailboxId] = new() { EmailsContainer = "ehcp-team-emails", CasesContainer = "ehcp-team-cases" } }
+        Database = Environment.GetEnvironmentVariable("Cosmos__Database") ?? "ehcp-local"
     };
     private readonly CosmosClient client;
     private readonly HttpClient http = new()
@@ -27,6 +26,7 @@ public sealed class GetEmailSteps : IDisposable
         BaseAddress = new Uri(Environment.GetEnvironmentVariable("Ehcp__BaseUrl") ?? "http://localhost:5100")
     };
     private EmailDocument? seeded;
+    private string? seededMailboxId;
     private HttpResponseMessage? response;
 
     public GetEmailSteps() => client = new CosmosClient(settings.Endpoint, settings.Key, new CosmosClientOptions
@@ -35,18 +35,26 @@ public sealed class GetEmailSteps : IDisposable
         UseSystemTextJsonSerializerWithOptions = CosmosDocumentStore<EmailDocument>.JsonOptions
     });
 
+    [Given("the mailbox {string} is selected")]
+    public void GivenTheMailboxIsSelected(string mailbox)
+    {
+        mailboxId = mailbox;
+        settings.Mailboxes[mailbox] = new() { EmailsContainer = "ehcp-team-emails", CasesContainer = "ehcp-team-cases" };
+    }
+
     [Given("the database is setup to contain an email with id {string} and processing status {string}")]
     public async Task GivenTheDatabaseContainsAnEmail(string emailId, string status)
     {
         ChildResult child = new(null, Enum.Parse<ChildStatus>(status), null, null, null,
             status == nameof(ChildStatus.Folded) ? "spec-case" : null, [], [], []);
         seeded = new EmailDocument(emailId, "spec-thread", Direction.inbound, DateTimeOffset.UtcNow, [child]);
-        await new CosmosDocumentStore<EmailDocument>(client, settings).CreateAsync(MailboxId, seeded, default);
+        await new CosmosDocumentStore<EmailDocument>(client, settings).CreateAsync(mailboxId, seeded, default);
+        seededMailboxId = mailboxId;
     }
 
-    [When(@"a request is made to the \/emails\/{string} endpoint")]
-    public async Task WhenARequestIsMadeToTheEmailsEndpoint(string emailId) =>
-        response = await http.GetAsync($"/api/mailboxes/{MailboxId}/emails/{Uri.EscapeDataString(emailId)}");
+    [When(@"a request is made to the \/mailbox\/{string}\/emails\/{string} endpoint")]
+    public async Task WhenARequestIsMadeToTheEmailsEndpoint(string mailbox, string emailId) =>
+        response = await http.GetAsync($"/api/mailboxes/{Uri.EscapeDataString(mailbox)}/emails/{Uri.EscapeDataString(emailId)}");
 
     [Then("the email record should be retrieved with processing status {string}")]
     public async Task ThenTheEmailRecordShouldBeRetrieved(string status)
@@ -60,11 +68,18 @@ public sealed class GetEmailSteps : IDisposable
         Assert.Equal(status, body.Status);
     }
 
+    [Then("the response should be not found")]
+    public void ThenTheResponseShouldBeNotFound()
+    {
+        Assert.NotNull(response);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
     [AfterScenario]
     public async Task RemoveSeededRecord()
     {
-        if (seeded is null) return;
-        Container container = client.GetContainer(settings.Database, settings.Mailboxes[MailboxId].EmailsContainer);
+        if (seeded is null || seededMailboxId is null) return;
+        Container container = client.GetContainer(settings.Database, settings.Mailboxes[seededMailboxId].EmailsContainer);
         try { await container.DeleteItemAsync<JsonObject>(seeded.Id, new PartitionKey(seeded.Id)); }
         catch (CosmosException error) when (error.StatusCode == HttpStatusCode.NotFound) { }
     }
