@@ -9,7 +9,7 @@ public sealed class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : I
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext context, Exception exception, CancellationToken ct)
     {
-        var (status, code, message) = exception switch
+        (int status, string code, string message) = exception switch
         {
             DocumentValidationException e => (400, "VALIDATION_ERROR", e.Message),
             DocumentStoreException { Failure: StoreFailure.NotFound } => (404, "NOT_FOUND", "No record found for the supplied id."),

@@ -16,26 +16,26 @@ public sealed class ApiTests
     [Fact] public async Task MissingTokenCanReadLocalData()
     {
         await using var factory = new ApiFactory();
-        using var client = factory.CreateClient();
-        var response = await client.GetAsync("/api/mailboxes/ehcp-team-shared/emails/example");
+        using HttpClient client = factory.CreateClient();
+        HttpResponseMessage response = await client.GetAsync("/api/mailboxes/ehcp-team-shared/emails/example");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
     [Fact] public async Task CrudUsesLocationAndConcurrencyHeaders()
     {
         await using var factory = new ApiFactory();
-        using var client = factory.CreateClient();
+        using HttpClient client = factory.CreateClient();
         const string url = "/api/mailboxes/ehcp-team-shared/emails";
-        var created = await client.PostAsJsonAsync(url, Example, CosmosDocumentStore<EmailDocument>.JsonOptions);
+        HttpResponseMessage created = await client.PostAsJsonAsync(url, Example, CosmosDocumentStore<EmailDocument>.JsonOptions);
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
         Assert.NotNull(created.Headers.Location);
-        var read = await client.GetAsync(created.Headers.Location);
+        HttpResponseMessage read = await client.GetAsync(created.Headers.Location);
         Assert.Equal(HttpStatusCode.OK, read.StatusCode);
-        var missingTag = await client.PutAsJsonAsync(url + "/example", Example, CosmosDocumentStore<EmailDocument>.JsonOptions);
+        HttpResponseMessage missingTag = await client.PutAsJsonAsync(url + "/example", Example, CosmosDocumentStore<EmailDocument>.JsonOptions);
         Assert.Equal((HttpStatusCode)428, missingTag.StatusCode);
         var update = new HttpRequestMessage(HttpMethod.Put, url + "/example")
         { Content = JsonContent.Create(Example with { ConversationId = "updated" }, options: CosmosDocumentStore<EmailDocument>.JsonOptions) };
         update.Headers.IfMatch.Add(read.Headers.ETag!);
-        var replaced = await client.SendAsync(update);
+        HttpResponseMessage replaced = await client.SendAsync(update);
         Assert.Equal(HttpStatusCode.OK, replaced.StatusCode);
         var stale = new HttpRequestMessage(HttpMethod.Delete, url + "/example");
         stale.Headers.IfMatch.Add(read.Headers.ETag!);
@@ -48,10 +48,10 @@ public sealed class ApiTests
     [Fact] public async Task OpenApiIsVersionThreeZeroAndHasAllNineOperations()
     {
         await using var factory = new ApiFactory();
-        using var json = JsonDocument.Parse(await factory.CreateClient().GetStringAsync("/openapi/v1.json"));
-        Assert.False(json.RootElement.TryGetProperty("security", out var security) && security.GetArrayLength() > 0);
-        if (json.RootElement.TryGetProperty("components", out var components))
-            Assert.False(components.TryGetProperty("securitySchemes", out var schemes) && schemes.EnumerateObject().Any());
+        using JsonDocument json = JsonDocument.Parse(await factory.CreateClient().GetStringAsync("/openapi/v1.json"));
+        Assert.False(json.RootElement.TryGetProperty("security", out JsonElement security) && security.GetArrayLength() > 0);
+        if (json.RootElement.TryGetProperty("components", out JsonElement components))
+            Assert.False(components.TryGetProperty("securitySchemes", out JsonElement schemes) && schemes.EnumerateObject().Any());
         Assert.StartsWith("3.0.", json.RootElement.GetProperty("openapi").GetString());
         Assert.Equal(9, json.RootElement.GetProperty("paths").EnumerateObject()
             .Sum(path => path.Value.EnumerateObject().Count(p => new[] { "get", "post", "put", "delete" }.Contains(p.Name))));
@@ -78,24 +78,23 @@ internal sealed class ApiFactory : WebApplicationFactory<Program>
 
 internal sealed class MemoryEmails : IDocumentStore<EmailDocument>
 {
-    private readonly Dictionary<(string, string), StoredDocument<EmailDocument>> values = new();
+    private readonly Dictionary<(string, string), StoredDocument<EmailDocument>> _values = new();
     public Task<StoredDocument<EmailDocument>> ReadAsync(string mailbox, string id, CancellationToken ct) =>
-        Task.FromResult(values.TryGetValue((mailbox, id), out var value) ? value : throw new DocumentStoreException(StoreFailure.NotFound));
+        Task.FromResult(_values.TryGetValue((mailbox, id), out StoredDocument<EmailDocument>? value) ? value : throw new DocumentStoreException(StoreFailure.NotFound));
     public Task<StoredDocument<EmailDocument>> CreateAsync(string mailbox, EmailDocument document, CancellationToken ct)
     {
         var value = new StoredDocument<EmailDocument>(document, $"\"{Guid.NewGuid()}\"");
-        if (!values.TryAdd((mailbox, document.Id), value)) throw new DocumentStoreException(StoreFailure.Conflict);
-        return Task.FromResult(value);
+        return !_values.TryAdd((mailbox, document.Id), value) ? throw new DocumentStoreException(StoreFailure.Conflict) : Task.FromResult(value);
     }
     public async Task<StoredDocument<EmailDocument>> ReplaceAsync(string mailbox, string id, EmailDocument document, string etag, CancellationToken ct)
     {
-        var current = await ReadAsync(mailbox, id, ct);
+        StoredDocument<EmailDocument> current = await ReadAsync(mailbox, id, ct);
         if (current.ETag != etag) throw new DocumentStoreException(StoreFailure.PreconditionFailed);
-        return values[(mailbox, id)] = new(document, $"\"{Guid.NewGuid()}\"");
+        return _values[(mailbox, id)] = new StoredDocument<EmailDocument>(document, $"\"{Guid.NewGuid()}\"");
     }
     public async Task DeleteAsync(string mailbox, string id, string etag, CancellationToken ct)
     {
         if ((await ReadAsync(mailbox, id, ct)).ETag != etag) throw new DocumentStoreException(StoreFailure.PreconditionFailed);
-        values.Remove((mailbox, id));
+        _values.Remove((mailbox, id));
     }
 }

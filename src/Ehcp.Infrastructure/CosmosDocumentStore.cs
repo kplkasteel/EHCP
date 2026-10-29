@@ -17,7 +17,7 @@ public sealed class CosmosDocumentStore<T>(CosmosClient client, CosmosSettings s
     private Container Container(string mailboxId)
     {
         // Only configured names are used. Request values never become container names.
-        if (!settings.Mailboxes.TryGetValue(mailboxId, out var mailbox))
+        if (!settings.Mailboxes.TryGetValue(mailboxId, out MailboxSettings? mailbox))
             throw new DocumentStoreException(StoreFailure.NotFound);
         return client.GetContainer(settings.Database,
             typeof(T) == typeof(EmailDocument) ? mailbox.EmailsContainer : mailbox.CasesContainer);
@@ -30,7 +30,7 @@ public sealed class CosmosDocumentStore<T>(CosmosClient client, CosmosSettings s
     };
     private static JsonObject Payload(T document)
     {
-        var node = JsonSerializer.SerializeToNode(document, JsonOptions)!.AsObject();
+        JsonObject node = JsonSerializer.SerializeToNode(document, JsonOptions)!.AsObject();
         if (document is EmailDocument email) node["ttl"] = DocumentRules.EmailTtl(email);
         return node;
     }

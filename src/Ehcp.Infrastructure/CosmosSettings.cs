@@ -7,7 +7,7 @@ public sealed class CosmosSettings
     public string Database { get; set; } = "ehcp-local";
     public bool Initialize { get; set; }
     public Dictionary<string, MailboxSettings> Mailboxes { get; set; } = new(StringComparer.Ordinal);
-    public bool IsValid() => Uri.TryCreate(Endpoint, UriKind.Absolute, out var uri)
+    public bool IsValid() => Uri.TryCreate(Endpoint, UriKind.Absolute, out Uri? uri)
         && uri.Scheme == "https" && !string.IsNullOrWhiteSpace(Key)
         && !string.IsNullOrWhiteSpace(Database) && Mailboxes.Count > 0
         && Mailboxes.All(m => !string.IsNullOrWhiteSpace(m.Key)

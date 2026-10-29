@@ -21,7 +21,7 @@ public static class DocumentRules
         if (!Enum.IsDefined(document.Direction) || document.ReceivedDateTime == default)
             throw new DocumentValidationException("A valid direction and receivedDateTime are required.");
         RequireList(document.Children, "children");
-        foreach (var child in document.Children)
+        foreach (ChildResult child in document.Children)
         {
             if (!Enum.IsDefined(child.Status)) throw new DocumentValidationException("Invalid child status.");
             RequireList(child.PossibleCaseMatches, "possibleCaseMatches");
@@ -31,7 +31,7 @@ public static class DocumentRules
             if (child.MatchedCaseId is not null) ValidateId(child.MatchedCaseId);
             if (child.Status != ChildStatus.Conflict && child.PossibleCaseMatches.Count != 0)
                 throw new DocumentValidationException("Only Conflict results may have possibleCaseMatches.");
-            foreach (var match in child.PossibleCaseMatches)
+            foreach (PossibleCaseMatch match in child.PossibleCaseMatches)
             {
                 ValidateId(match.EntityId);
                 Band(match.ConfidenceBand);
@@ -49,14 +49,14 @@ public static class DocumentRules
         ValidateFields(document.Relationships, document.Attributes);
         RequireList(document.Communications, "communications");
         RequireList(document.Conflicts, "conflicts");
-        foreach (var item in document.Communications)
+        foreach (Communication item in document.Communications)
         {
             ValidateId(item.EmailId);
             if (!Enum.IsDefined(item.Direction) || item.ReceivedDateTime == default)
                 throw new DocumentValidationException("Invalid communication direction or receivedDateTime.");
         }
 
-        foreach (var item in document.Conflicts)
+        foreach (Conflict item in document.Conflicts)
         {
             ValidateId(item.EmailId);
             Band(item.ConfidenceBand);
@@ -69,7 +69,7 @@ public static class DocumentRules
     {
         RequireList(relationships, "relationships");
         RequireList(attributes, "attributes");
-        foreach (var item in relationships)
+        foreach (Relationship item in relationships)
         {
             Required(item.Type, "relationship.type");
             Required(item.Name, "relationship.name");
@@ -77,7 +77,7 @@ public static class DocumentRules
             Status(item.UserStatus);
         }
 
-        foreach (var item in attributes)
+        foreach (CaseAttribute item in attributes)
         {
             Required(item.Type, "attribute.type");
             Required(item.Value, "attribute.value");

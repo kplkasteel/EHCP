@@ -20,8 +20,8 @@ public sealed class CasesController(IDocumentStore<CaseDocument> store) : Contro
     public async Task<ActionResult<CaseDocument>> Get(string mailboxId, string entityId, CancellationToken ct)
     {
         DocumentRules.ValidateId(entityId);
-        var stored = await store.ReadAsync(mailboxId, entityId, ct);
-        var document = stored.Document;
+        StoredDocument<CaseDocument> stored = await store.ReadAsync(mailboxId, entityId, ct);
+        CaseDocument document = stored.Document;
         document = document with { Communications = document.Communications.OrderByDescending(c => c.ReceivedDateTime).ToArray() };
         Response.Headers.ETag = stored.ETag;
         return Ok(document);
@@ -35,7 +35,7 @@ public sealed class CasesController(IDocumentStore<CaseDocument> store) : Contro
     {
         DocumentRules.Validate(document);
         document = document with { Communications = document.Communications.OrderByDescending(c => c.ReceivedDateTime).ToArray() };
-        var stored = await store.CreateAsync(mailboxId, document, ct);
+        StoredDocument<CaseDocument> stored = await store.CreateAsync(mailboxId, document, ct);
         Response.Headers.ETag = stored.ETag;
         return CreatedAtAction(nameof(Get), new { mailboxId, entityId = document.EntityId }, stored.Document);
     }
@@ -53,7 +53,7 @@ public sealed class CasesController(IDocumentStore<CaseDocument> store) : Contro
         if (entityId != document.EntityId) throw new DocumentValidationException("Route and body identifiers must match.");
         if (!ETagRules.IsSpecific(etag)) return StatusCode(428, new ApiError("PRECONDITION_REQUIRED", "Supply the ETag from GET in If-Match."));
         document = document with { Communications = document.Communications.OrderByDescending(c => c.ReceivedDateTime).ToArray() };
-        var stored = await store.ReplaceAsync(mailboxId, entityId, document, etag!, ct);
+        StoredDocument<CaseDocument> stored = await store.ReplaceAsync(mailboxId, entityId, document, etag!, ct);
         Response.Headers.ETag = stored.ETag;
         return Ok(stored.Document);
     }

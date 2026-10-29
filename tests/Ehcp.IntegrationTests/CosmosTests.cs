@@ -24,7 +24,7 @@ public sealed class CosmosTests
             Endpoint = Environment.GetEnvironmentVariable("EHCP_TEST_COSMOS_ENDPOINT") ?? "https://localhost:8081",
             Key = Environment.GetEnvironmentVariable("EHCP_TEST_COSMOS_KEY")!,
             Database = "ehcp-test-" + Guid.NewGuid().ToString("N"),
-            Mailboxes = new()
+            Mailboxes = new Dictionary<string, MailboxSettings>
             {
                 ["one"] = new() { Role = "One", EmailsContainer = "one-emails", CasesContainer = "one-cases" },
                 ["two"] = new() { Role = "Two", EmailsContainer = "two-emails", CasesContainer = "two-cases" }
@@ -38,24 +38,24 @@ public sealed class CosmosTests
             var emails = new CosmosDocumentStore<EmailDocument>(client, settings);
             var cases = new CosmosDocumentStore<CaseDocument>(client, settings);
             var email = new EmailDocument("email-1", "thread", Direction.inbound, DateTimeOffset.UtcNow, []);
-            var created = await emails.CreateAsync("one", email, default);
+            StoredDocument<EmailDocument> created = await emails.CreateAsync("one", email, default);
             var duplicate = await Assert.ThrowsAsync<DocumentStoreException>(() => emails.CreateAsync("one", email, default));
             Assert.Equal(StoreFailure.Conflict, duplicate.Failure);
             var missing = await Assert.ThrowsAsync<DocumentStoreException>(() => emails.ReadAsync("two", email.Id, default));
             Assert.Equal(StoreFailure.NotFound, missing.Failure);
-            var read = await emails.ReadAsync("one", email.Id, default);
+            StoredDocument<EmailDocument> read = await emails.ReadAsync("one", email.Id, default);
             Assert.Equal("thread", read.Document.ConversationId);
-            var container = client.GetContainer(settings.Database, "one-emails");
-            var raw = await container.ReadItemAsync<JsonObject>(email.Id, new PartitionKey(email.Id));
+            Container container = client.GetContainer(settings.Database, "one-emails");
+            ItemResponse<JsonObject> raw = await container.ReadItemAsync<JsonObject>(email.Id, new PartitionKey(email.Id));
             Assert.Equal(2592000, raw.Resource["ttl"]!.GetValue<int>());
-            var folded = email with { Children = [new(null, ChildStatus.Folded, null, null, null, "case-1", [], [], [])] };
-            var updated = await emails.ReplaceAsync("one", email.Id, folded, read.ETag, default);
+            EmailDocument folded = email with { Children = [new ChildResult(null, ChildStatus.Folded, null, null, null, "case-1", [], [], [])] };
+            StoredDocument<EmailDocument> updated = await emails.ReplaceAsync("one", email.Id, folded, read.ETag, default);
             raw = await container.ReadItemAsync<JsonObject>(email.Id, new PartitionKey(email.Id));
             Assert.Equal(-1, raw.Resource["ttl"]!.GetValue<int>());
             var stale = await Assert.ThrowsAsync<DocumentStoreException>(() => emails.DeleteAsync("one", email.Id, created.ETag, default));
             Assert.Equal(StoreFailure.PreconditionFailed, stale.Failure);
             var record = new CaseDocument("case-1", "case-1", "Example Child", "EHC-123", null, new DateOnly(2016, 3, 14), [], [], [], []);
-            var savedCase = await cases.CreateAsync("one", record, default);
+            StoredDocument<CaseDocument> savedCase = await cases.CreateAsync("one", record, default);
             Assert.Equal(record.DateOfBirth, (await cases.ReadAsync("one", "case-1", default)).Document.DateOfBirth);
             await cases.DeleteAsync("one", "case-1", savedCase.ETag, default);
             await emails.DeleteAsync("one", email.Id, updated.ETag, default);

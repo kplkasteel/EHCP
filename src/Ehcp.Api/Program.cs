@@ -11,8 +11,8 @@ using Microsoft.Azure.Cosmos;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 
-var builder = WebApplication.CreateBuilder(args);
-var cosmos = builder.Configuration.GetSection("Cosmos").Get<CosmosSettings>() ?? new();
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+CosmosSettings cosmos = builder.Configuration.GetSection("Cosmos").Get<CosmosSettings>() ?? new CosmosSettings();
 if (!cosmos.IsValid())
     throw new InvalidOperationException(
         "Configure Cosmos endpoint, key, database and distinct mailbox containers. For local development, set Cosmos__Key to the key from the running emulator.");
@@ -84,7 +84,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi(options =>
 {
     options.OpenApiVersion = OpenApiSpecVersion.OpenApi3_0;
-    options.AddDocumentTransformer((document, context, ct) =>
+    options.AddDocumentTransformer((document, _, _) =>
     {
         document.Info.Title = "EHCP Application API";
         document.Info.Version = "1.0.0";
@@ -100,7 +100,7 @@ builder.Services.AddOpenApi(options =>
     });
 });
 
-var app = builder.Build();
+WebApplication app = builder.Build();
 app.UseExceptionHandler();
 // app.UseAuthentication();
 // app.UseAuthorization();
@@ -127,6 +127,4 @@ if (cosmos.Initialize)
 
 app.Run();
 
-public partial class Program
-{
-}
+public partial class Program;

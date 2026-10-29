@@ -20,8 +20,8 @@ public sealed class EmailsController(IDocumentStore<EmailDocument> store) : Cont
     public async Task<ActionResult<EmailDocument>> Get(string mailboxId, string emailId, CancellationToken ct)
     {
         DocumentRules.ValidateId(emailId);
-        var stored = await store.ReadAsync(mailboxId, emailId, ct);
-        var document = stored.Document;
+        StoredDocument<EmailDocument> stored = await store.ReadAsync(mailboxId, emailId, ct);
+        EmailDocument document = stored.Document;
         
         Response.Headers.ETag = stored.ETag;
         return Ok(document);
@@ -35,7 +35,7 @@ public sealed class EmailsController(IDocumentStore<EmailDocument> store) : Cont
     {
         DocumentRules.Validate(document);
         
-        var stored = await store.CreateAsync(mailboxId, document, ct);
+        StoredDocument<EmailDocument> stored = await store.CreateAsync(mailboxId, document, ct);
         Response.Headers.ETag = stored.ETag;
         return CreatedAtAction(nameof(Get), new { mailboxId, emailId = document.Id }, stored.Document);
     }
@@ -53,7 +53,7 @@ public sealed class EmailsController(IDocumentStore<EmailDocument> store) : Cont
         if (emailId != document.Id) throw new DocumentValidationException("Route and body identifiers must match.");
         if (!ETagRules.IsSpecific(etag)) return StatusCode(428, new ApiError("PRECONDITION_REQUIRED", "Supply the ETag from GET in If-Match."));
         
-        var stored = await store.ReplaceAsync(mailboxId, emailId, document, etag!, ct);
+        StoredDocument<EmailDocument> stored = await store.ReplaceAsync(mailboxId, emailId, document, etag!, ct);
         Response.Headers.ETag = stored.ETag;
         return Ok(stored.Document);
     }
