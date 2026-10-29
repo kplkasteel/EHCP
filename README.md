@@ -21,6 +21,8 @@ dotnet test tests/Ehcp.Tests
 dotnet run --project src/Ehcp.Api
 ```
 
+With Ruby and Rake installed, `rake go` sets the variables above (emulator key defaults to the public emulator key; override with `Cosmos__Key`), restores, builds, runs the unit tests, starts the API, runs the Reqnroll specs in `tests/Ehcp.Specs` and stops the API. `rake -T` lists the individual steps.
+
 All endpoints currently accept requests without a token. No authentication services, middleware or Entra metadata discovery are configured. API base URL: `http://localhost:5100`; OpenAPI JSON: `http://localhost:5100/openapi/v1.json`. Import this URL into Postman or an OpenAPI client. An interactive Swagger UI is not included. The API's HTTP listener is for loopback development; production must terminate TLS at its configured gateway/host.
 
 ```powershell
