@@ -1,0 +1,17 @@
+{
+  "mailboxId": "ehcp-team-shared-1",
+  "emailId": "graph/scenario-1-single-child",
+  "result": {
+    "children": [
+      {
+        "name": "Alex Example",
+        "nhsNumber": null,
+        "caseId": null,
+        "dateOfBirth": null,
+        "relationships": [],
+        "attributes": []
+      }
+    ],
+    "summary": "Request for support"
+  }
+}
