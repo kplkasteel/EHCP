@@ -16,6 +16,7 @@ public static class DocumentRules
 
     public static void Validate(EmailDocument document)
     {
+        if (!Enum.IsDefined(document.Status)) throw new DocumentValidationException("Invalid email processing status.");
         ValidateId(document.Id);
         Required(document.ConversationId, "conversationId");
         if (!Enum.IsDefined(document.Direction) || document.ReceivedDateTime == default)

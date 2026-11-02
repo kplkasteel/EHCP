@@ -1,0 +1,11 @@
+{
+  "mailboxId": "ehcp-team-shared-1",
+  "email": {
+    "id": "graph/scenario-1-single-child",
+    "conversationId": "conversation-scenario-1-single-child",
+    "direction": "inbound",
+    "receivedDateTime": "2026-10-28T12:00:00+00:00",
+    "subject": "EHCP request",
+    "body": "Please help with support for Alex."
+  }
+}

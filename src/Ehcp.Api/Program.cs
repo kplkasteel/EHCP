@@ -5,25 +5,13 @@ using Ehcp.Infrastructure;
 
 // using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Cosmos;
 
 // using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
-CosmosSettings cosmos = builder.Configuration.GetSection("Cosmos").Get<CosmosSettings>() ?? new CosmosSettings();
-if (!cosmos.IsValid())
-    throw new InvalidOperationException(
-        "Configure Cosmos endpoint, key, database and distinct mailbox containers. For local development, set Cosmos__Key to the key from the running emulator.");
-builder.Services.AddSingleton(cosmos);
-builder.Services.AddSingleton(_ => new CosmosClient(cosmos.Endpoint, cosmos.Key, new CosmosClientOptions
-{
-    ConnectionMode = ConnectionMode.Gateway,
-    UseSystemTextJsonSerializerWithOptions = CosmosDocumentStore<EmailDocument>.JsonOptions
-}));
-builder.Services.AddSingleton<IDocumentStore<EmailDocument>, CosmosDocumentStore<EmailDocument>>();
-builder.Services.AddSingleton<IDocumentStore<CaseDocument>, CosmosDocumentStore<CaseDocument>>();
+builder.Services.AddEhcpInfrastructure(builder.Configuration);
 
 // FUTURE AUTH: deliberately disabled for local development. Restore this block
 // together with middleware, controller attributes, package reference and OpenAPI security.
@@ -118,12 +106,7 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference(options => options.Title = "EHCP API");
 }
 
-if (cosmos.Initialize)
-{
-    if (!app.Environment.IsDevelopment())
-        throw new InvalidOperationException("Provision production containers through deployment tooling.");
-    await CosmosInitializer.InitializeAsync(app.Services.GetRequiredService<CosmosClient>(), cosmos);
-}
+await app.Services.InitializeEhcpInfrastructureAsync(app.Environment.IsDevelopment());
 
 app.Run();
 

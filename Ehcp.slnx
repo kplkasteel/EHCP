@@ -1,5 +1,7 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Ehcp.Application/Ehcp.Application.csproj" />
+    <Project Path="src/Ehcp.Processing/Ehcp.Processing.csproj" />
     <Project Path="src/Ehcp.Core/Ehcp.Core.csproj" />
     <Project Path="src/Ehcp.Infrastructure/Ehcp.Infrastructure.csproj" />
     <Project Path="src/Ehcp.Api/Ehcp.Api.csproj" />
@@ -10,3 +12,4 @@
     <Project Path="tests/Ehcp.Specs/Ehcp.Specs.csproj" />
   </Folder>
 </Solution>
+

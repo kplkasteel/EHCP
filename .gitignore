@@ -7,3 +7,5 @@
 **/appsettings.Local.json
 TestResults/
 **/*.feature.cs
+**/local.settings.json
+

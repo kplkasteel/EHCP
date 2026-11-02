@@ -116,7 +116,7 @@ The adapter uses point reads and a singleton Cosmos client. It stores the protot
 - The supplied material is an OpenAPI/read-model prototype, not executable ingestion or processing code. Its read endpoints and identifiers are retained; CRUD is added per the request. It labels itself 3.1 but uses 3.0-style `nullable`; generated output explicitly targets 3.0.
 - This is an ASP.NET Core service, not an Azure Functions project. The prototype's product title alone was not treated as a hosting requirement.
 - Core contains framework-independent models/rules and a storage port. Infrastructure implements Cosmos persistence. API handles HTTP, authorization, composition and validation. No extra service layer, mediator or interface-per-class is introduced without business behaviour to justify it.
-- This is trusted document CRUD. It does not run AI extraction, verify cross-document links, fold emails into cases, merge records, resolve conflicts, generate drafts, or provide multi-document transactions. A Folded result must carry a matched case ID but the referenced case's existence is not checked atomically.
+- The API remains trusted document CRUD. The separate Ehcp.Processing queue Function now retrieves Graph email, extracts child details, matches cases and folds communications. Cross-container writes are retryable but not atomic. See docs/dependencies.md for the initial matching policy and docs/processing/README.md for configuration and sample data.
 - `sourceEmailId` is preserved on reads and accepted as supplied on full replacement. This CRUD surface does **not** enforce the prototype's officer-edit provenance rule. A dedicated edit command needs stable relationship/attribute IDs and provenance rules before it is exposed to officer UI clients. When authentication is enabled, restrict `DataWriter` to trusted integrations until that workflow is implemented.
 - Archive state is not defined in the supplied schema. DELETE is hard-delete; archive filtering/workflows are not implemented. No automatic cascade is performed.
 - Confirm actual mailbox roles, container names, Graph ID format, TTL semantics and the separate design v1.4 document before production integration. That document was mentioned in the paste but was not attached.
@@ -139,3 +139,16 @@ Unit/API tests cover identifier and child-state validation, TTL selection, anony
 - [ASP.NET Core OpenAPI generation and version selection](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/openapi/aspnetcore-openapi?view=aspnetcore-10.0)
 - [JWT bearer validation](https://learn.microsoft.com/en-us/aspnet/core/security/authentication/configure-jwt-bearer-authentication?view=aspnetcore-10.0)
 - [Cosmos .NET SDK practices and JSON dependencies](https://learn.microsoft.com/en-us/azure/cosmos-db/best-practice-dotnet)
+
+
+## Queue-triggered email processing
+
+The processing host implements the queue → Graph → extraction → matching → Cosmos flow.
+Graph and extraction can independently use real HTTP adapters or configured JSON
+fixtures in Development, while matching and Cosmos stay real. Email-level status
+tracks Unprocessed, Processing, Processed or Failed independently of child outcomes.
+
+Build the solution, then start Azure Functions Core Tools from src/Ehcp.Processing.
+See [local setup and adapter contracts](docs/processing/README.md) and
+[architecture, matching and retry behavior](docs/dependencies.md).
+Automated tests for this new flow are intentionally left for the team to author.
