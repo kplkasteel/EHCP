@@ -1,0 +1,13 @@
+{
+  "relevance": true,
+  "reliability": true,
+  "extractedChildren": [
+    {
+      "name": "Alex Example",
+      "nhsNumber": null,
+      "dateOfBirth": "2016-03-14",
+      "relationships": [],
+      "attributes": []
+    }
+  ]
+}
