@@ -1,0 +1,14 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "AZURE_FUNCTIONS_ENVIRONMENT": "Development",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "ProcessingQueueName": "ehcp-processing",
+    "Processing__Graph__Mode": "Mock",
+    "Processing__Graph__DataPath": "/absolute/path/to/scenario-1-single-child-graph-email.json",
+    "Processing__Extraction__Mode": "Mock",
+    "Processing__Extraction__DataPath": "/absolute/path/to/scenario-1-single-child-ai-extract.json",
+    "Cosmos__Key": "set-from-your-local-emulator"
+  }
+}

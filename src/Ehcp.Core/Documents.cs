@@ -63,7 +63,8 @@ public sealed record EmailDocument(
     string ConversationId,
     Direction Direction,
     DateTimeOffset ReceivedDateTime,
-    IReadOnlyList<ChildResult> Children);
+    IReadOnlyList<ChildResult> Children,
+    EmailProcessingStatus Status = EmailProcessingStatus.Unprocessed);
 
 public sealed record Communication(
     string EmailId,
