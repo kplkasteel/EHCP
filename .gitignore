@@ -6,6 +6,8 @@
 !.env.example
 **/appsettings.Local.json
 TestResults/
+**/living-documentation.html
+**/livingdoc-job-*.json
 **/*.feature.cs
 **/local.settings.json
 
