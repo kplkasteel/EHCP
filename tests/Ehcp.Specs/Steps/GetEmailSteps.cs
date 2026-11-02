@@ -10,7 +10,7 @@ using Xunit;
 namespace Ehcp.Specs.Steps;
 
 [Binding]
-public sealed class GetEmailSteps : IDisposable
+public sealed partial class GetEmailSteps : IDisposable
 {
     private string mailboxId = string.Empty;
 
@@ -45,9 +45,11 @@ public sealed class GetEmailSteps : IDisposable
     [Given("the database is setup to contain an email with id {string} and processing status {string}")]
     public async Task GivenTheDatabaseContainsAnEmail(string emailId, string status)
     {
-        ChildResult child = new(null, Enum.Parse<ChildStatus>(status), null, null, null,
-            status == nameof(ChildStatus.Folded) ? "spec-case" : null, [], [], []);
-        seeded = new EmailDocument(emailId, "spec-thread", Direction.inbound, DateTimeOffset.UtcNow, [child]);
+        // "status" here is the email-level EmailProcessingStatus (Unprocessed/Processing/Processed/Failed),
+        // not the per-child ChildStatus; the child itself is left at its default Unprocessed state.
+        ChildResult child = new(null, ChildStatus.Unprocessed, null, null, null, null, [], [], []);
+        seeded = new EmailDocument(emailId, "spec-thread", Direction.inbound, DateTimeOffset.UtcNow, [child],
+            Enum.Parse<EmailProcessingStatus>(status));
         await new CosmosDocumentStore<EmailDocument>(client, settings).CreateAsync(mailboxId, seeded, default);
         seededMailboxId = mailboxId;
     }

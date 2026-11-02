@@ -1,10 +1,29 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><IsTestProject>true</IsTestProject><IsPackable>false</IsPackable></PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Azure.Storage.Queues" Version="12.28.1" />
+    <PackageReference Include="LivingDocGen.Reqnroll.Integration" Version="3.0.0" GeneratePathProperty="true" />
     <ProjectReference Include="../../src/Ehcp.Infrastructure/Ehcp.Infrastructure.csproj" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1"><PrivateAssets>all</PrivateAssets></PackageReference>
     <PackageReference Include="Reqnroll.xUnit" Version="3.3.4" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="data\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="livingdocgen.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!-- LivingDocGen.Reqnroll.Integration 3.0.0's nuspec is missing copyToOutput="true" on its
+       contentFiles entries, so its detached worker's deps/apphost never reach bin\ and it
+       silently fails to launch. Its shipped runtimeconfig.json also has no rollForward policy,
+       so on a machine with only the .NET 10 SDK/ref packs installed (no net8.0 ref pack), the
+       worker's Razor/Roslyn template compilation resolves net10.0 reference assemblies against
+       the pinned net8.0 runtime and crashes with a System.Runtime version mismatch. Copy the
+       deps/apphost from the package, but substitute our own fixed runtimeconfig.json (adds
+       rollForward: LatestMajor) until this is fixed upstream. -->
+  <ItemGroup>
+    <None Include="LivingDocGen.Worker.runtimeconfig.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="$(PkgLivingDocGen_Reqnroll_Integration)\contentFiles\any\net8.0\LivingDocGen.Worker.deps.json" CopyToOutputDirectory="PreserveNewest" Link="LivingDocGen.Worker.deps.json" />
+    <None Include="$(PkgLivingDocGen_Reqnroll_Integration)\contentFiles\any\net8.0\LivingDocGen.Worker" CopyToOutputDirectory="PreserveNewest" Link="LivingDocGen.Worker" />
   </ItemGroup>
 </Project>

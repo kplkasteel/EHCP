@@ -76,7 +76,13 @@ end
 
 desc 'Run Reqnroll specs against an already running API'
 task specs: :env do
-  dotnet 'test', 'tests/Ehcp.Specs', '--no-build'
+  dotnet 'test', 'tests/Ehcp.Specs', '--no-build', '--logger', 'trx', '--results-directory', 'tests/Ehcp.Specs/TestResults'
+end
+
+desc 'Run only @wip-tagged Reqnroll specs against an already running API'
+task wip: :env do
+  dotnet 'test', 'tests/Ehcp.Specs', '--no-build', '--filter', 'Category=wip',
+    '--logger', 'trx', '--results-directory', 'tests/Ehcp.Specs/TestResults'
 end
 
 desc 'Set env vars, build, run unit tests, start the API, run Reqnroll specs, stop the API'
