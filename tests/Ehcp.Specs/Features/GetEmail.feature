@@ -1,6 +1,6 @@
 Feature: Retrieve email
 
-@wip
+
 Scenario Outline: Retrieve an existing email by id
 	Given the mailbox "ehcp-team-shared-1" is selected
 	And the database is setup to contain an email with id "<emailId>" and processing status "<status>"
@@ -19,6 +19,13 @@ Scenario: Email cannot be retrieved across mailboxes
 	Then the email record should be retrieved with processing status "Processed"
 	When a request is made to the /mailbox/"ehcp-team-shared-2"/emails/"spec-email-005" endpoint
 	Then the response should be not found
+
+
+Scenario: Email not present should return not found
+	Given the mailbox "ehcp-team-shared-1" is selected
+	When a request is made to the /mailbox/"ehcp-team-shared-1"/emails/"spec-email-006" endpoint
+	Then the response should be not found
+
 
 Scenario: Email with child information extracted but not enough to create a case shows the correct state
 	Given the mailbox "ehcp-team-shared-1" is selected
