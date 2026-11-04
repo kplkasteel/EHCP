@@ -1,3 +1,5 @@
+using System.Net.Http;
+using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Azure.Storage.Queues;
@@ -16,8 +18,9 @@ public sealed partial class GetEmailSteps
 {
     private const string DataFolder = "data";
 
-    // Wrapper shapes the running Function's mock adapters actually deserialize
-    // (Ehcp.Infrastructure.FixtureServices.GraphFixture / ExtractionFixture).
+    // Fallback wrapper shapes for the file-based mock adapters (Ehcp.Infrastructure.FixtureServices),
+    // used only when MockGraph__BaseUrl / MockExtraction__BaseUrl are unset.
+    // When set, the HTTP mock services receive the payloads via POST {base}/api/seed instead.
     private sealed record GraphFixtureFile(string MailboxId, GraphEmail Email);
     private sealed record ExtractionFixtureFile(string MailboxId, string EmailId, EmailExtraction Result);
     private sealed record QueueMessageFile(string MailboxId, string EmailId, string GraphMessageId);
@@ -34,8 +37,16 @@ public sealed partial class GetEmailSteps
     private sealed record GraphEmailDatasetFile(
         string Id, string ConversationId, string Subject, GraphEmailBody Body, GraphEmailRecipient From);
 
+    // Payload POSTed to MockGraph's /api/seed: the Graph message shape GraphAPIService reads.
+    private sealed record GraphSeedMessage(
+        string Id, string ConversationId, DateTimeOffset ReceivedDateTime, string Subject,
+        GraphEmailBody Body, GraphEmailRecipient From);
+
+    private static readonly HttpClient SeedHttp = new();
+
     private EmailExtraction? pendingExtraction;
     private GraphEmail? pendingGraphEmail;
+    private GraphSeedMessage? pendingGraphMessage;
     private readonly List<(string MailboxId, string Id)> seededDatasetDocuments = [];
     private string? processingMailboxId;
     private string? processingEmailId;
@@ -72,6 +83,8 @@ public sealed partial class GetEmailSteps
         // but note the result will only match an expected-result.json that also expects these placeholders.
         pendingGraphEmail = new GraphEmail(file.Id, file.ConversationId, Direction.inbound,
             DateTimeOffset.Parse("2026-01-01T00:00:00Z"), file.Subject, file.Body.Content);
+        pendingGraphMessage = new GraphSeedMessage(file.Id, file.ConversationId,
+            DateTimeOffset.Parse("2026-01-01T00:00:00Z"), file.Subject, file.Body, file.From);
     }
 
     [When("the email record {string} is added to the queue")]
@@ -80,19 +93,19 @@ public sealed partial class GetEmailSteps
         QueueMessageFile message = await ReadDatasetAsync<QueueMessageFile>(dataset);
         Assert.NotNull(pendingGraphEmail);
         Assert.NotNull(pendingExtraction);
+        Assert.NotNull(pendingGraphMessage);
         if (pendingGraphEmail.Id != message.GraphMessageId)
             throw new InvalidOperationException(
                 $"The graph-api dataset's id ('{pendingGraphEmail.Id}') does not match the queue " +
                 $"message's graphMessageId ('{message.GraphMessageId}'); the mock will reject the request.");
 
-        await WriteFixtureAsync("Processing__Graph__DataPath",
+        await SeedMockAsync(MockGraphBaseUrl, pendingGraphMessage, GraphFixturePath, "Processing__Graph__DataPath",
             new GraphFixtureFile(message.MailboxId, pendingGraphEmail));
-        await WriteFixtureAsync("Processing__Extraction__DataPath",
-            new ExtractionFixtureFile(message.MailboxId, message.GraphMessageId, pendingExtraction));
+        var extractionFixture = new ExtractionFixtureFile(message.MailboxId, message.GraphMessageId, pendingExtraction);
+        await SeedMockAsync(MockExtractionBaseUrl, extractionFixture,
+            ExtractionFixturePath, "Processing__Extraction__DataPath", extractionFixture);
 
-        string connectionString = Environment.GetEnvironmentVariable("AzureWebJobsStorage") ?? "UseDevelopmentStorage=true";
-        string queueName = Environment.GetEnvironmentVariable("ProcessingQueueName") ?? "ehcp-processing";
-        var queue = new QueueClient(connectionString, queueName,
+        var queue = new QueueClient(AzureWebJobsStorage, ProcessingQueueName,
             new QueueClientOptions { MessageEncoding = QueueMessageEncoding.Base64 });
         await queue.CreateIfNotExistsAsync();
         string payload = JsonSerializer.Serialize(
@@ -169,11 +182,25 @@ public sealed partial class GetEmailSteps
             ?? throw new InvalidOperationException($"Dataset '{dataset}' is empty.");
     }
 
-    private static async Task WriteFixtureAsync<T>(string dataPathEnvVar, T fixture)
+    // Seeds the HTTP mock when its base URL is configured, otherwise writes the file the file-based mock reads.
+    private static Task SeedMockAsync<TFile>(string? baseUrl, object httpPayload,
+        string? fixturePath, string fixtureSetting, TFile filePayload) =>
+        baseUrl is not null
+            ? SeedAsync(baseUrl, httpPayload)
+            : WriteFixtureAsync(fixturePath, fixtureSetting, filePayload);
+
+    private static async Task SeedAsync(string baseUrl, object payload)
     {
-        string path = Environment.GetEnvironmentVariable(dataPathEnvVar)
-            ?? throw new InvalidOperationException(
-                $"{dataPathEnvVar} must be set to an absolute path (see src/Ehcp.Processing/local.settings.example.json) " +
+        using HttpResponseMessage response = await SeedHttp.PostAsync($"{baseUrl.TrimEnd('/')}/api/seed",
+            JsonContent.Create(payload, options: CosmosDocumentStore<EmailDocument>.JsonOptions));
+        response.EnsureSuccessStatusCode();
+    }
+
+    private static async Task WriteFixtureAsync<T>(string? path, string fixtureSetting, T fixture)
+    {
+        if (path is null)
+            throw new InvalidOperationException(
+                $"{fixtureSetting} must be set to an absolute path (see src/Ehcp.Processing/local.settings.example.json) " +
                 "so this step can write the fixture the running Function host reads.");
         await File.WriteAllTextAsync(path, JsonSerializer.Serialize(fixture, CosmosDocumentStore<EmailDocument>.JsonOptions));
     }

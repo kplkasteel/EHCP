@@ -37,3 +37,4 @@ Scenario: Email with child information extracted but not enough to create a case
 	When a request is made to the /mailbox/"ehcp-team-shared-1"/emails/"scenario-1-single-child" endpoint
 	Then the email record should be retrieved matching "scenario-1-single-child-expected-result.json"
 
+

@@ -12,19 +12,32 @@ namespace Ehcp.Specs.Steps;
 [Binding]
 public sealed partial class GetEmailSteps : IDisposable
 {
+    // Environment configuration, read once. Defaults target the local emulator and API.
+    private static string EnvOr(string name, string fallback) => Environment.GetEnvironmentVariable(name) ?? fallback;
+
+    private static string CosmosEndpoint { get; } = EnvOr("Cosmos__Endpoint", "https://localhost:8081");
+    private static string CosmosKey { get; } = EnvOr("Cosmos__Key", new CosmosSettings().Key);
+    private static string CosmosDatabase { get; } = EnvOr("Cosmos__Database", "ehcp-local");
+    private static string EhcpBaseUrl { get; } = EnvOr("Ehcp__BaseUrl", "http://localhost:5100");
+    private static string AzureWebJobsStorage { get; } = EnvOr("AzureWebJobsStorage", "UseDevelopmentStorage=true");
+    private static string ProcessingQueueName { get; } = EnvOr("ProcessingQueueName", "ehcp-processing");
+
+    // Null when unset, in which case the Processing mocks read the fixture file at the matching path instead.
+    private static string? MockGraphBaseUrl { get; } = Environment.GetEnvironmentVariable("MockGraph__BaseUrl");
+    private static string? MockExtractionBaseUrl { get; } = Environment.GetEnvironmentVariable("MockExtraction__BaseUrl");
+    private static string? GraphFixturePath { get; } = Environment.GetEnvironmentVariable("Processing__Graph__DataPath");
+    private static string? ExtractionFixturePath { get; } = Environment.GetEnvironmentVariable("Processing__Extraction__DataPath");
+
     private string mailboxId = string.Empty;
 
     private readonly CosmosSettings settings = new()
     {
-        Endpoint = Environment.GetEnvironmentVariable("Cosmos__Endpoint") ?? "https://localhost:8081",
-        Key = Environment.GetEnvironmentVariable("Cosmos__Key") ?? new CosmosSettings().Key,
-        Database = Environment.GetEnvironmentVariable("Cosmos__Database") ?? "ehcp-local"
+        Endpoint = CosmosEndpoint,
+        Key = CosmosKey,
+        Database = CosmosDatabase
     };
     private readonly CosmosClient client;
-    private readonly HttpClient http = new()
-    {
-        BaseAddress = new Uri(Environment.GetEnvironmentVariable("Ehcp__BaseUrl") ?? "http://localhost:5100")
-    };
+    private readonly HttpClient http = new() { BaseAddress = new Uri(EhcpBaseUrl) };
     private EmailDocument? seeded;
     private string? seededMailboxId;
     private HttpResponseMessage? response;
