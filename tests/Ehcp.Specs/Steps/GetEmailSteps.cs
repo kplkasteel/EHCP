@@ -67,6 +67,11 @@ public sealed partial class GetEmailSteps : IDisposable
         seededMailboxId = mailboxId;
     }
 
+     [When(@"a request is made to the \/mailbox\/{string}\/cases\/{string} endpoint")]
+      public async Task WhenARequestIsMadeToTheMailboxCasesEndpoint(string mailbox, string caseId) =>
+        response = await http.GetAsync($"/api/mailboxes/{Uri.EscapeDataString(mailbox)}/emails/{Uri.EscapeDataString(caseId)}");
+
+
     [When(@"a request is made to the \/mailbox\/{string}\/emails\/{string} endpoint")]
     public async Task WhenARequestIsMadeToTheEmailsEndpoint(string mailbox, string emailId) =>
         response = await http.GetAsync($"/api/mailboxes/{Uri.EscapeDataString(mailbox)}/emails/{Uri.EscapeDataString(emailId)}");
