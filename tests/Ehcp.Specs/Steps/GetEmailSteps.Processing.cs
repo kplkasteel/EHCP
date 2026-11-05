@@ -162,9 +162,9 @@ public sealed partial class GetEmailSteps
     [Then("the case record should be retrieved matching {string}")]
     public async Task ThenTheCaseRecordShouldBeRetrievedMatching(string dataset)
     {
-        Assert.NotNull(response);
-        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        string actualJson = await response.Content.ReadAsStringAsync();
+        Assert.NotNull(_response);
+        Assert.Equal(System.Net.HttpStatusCode.OK, _response.StatusCode);
+        string actualJson = await _response.Content.ReadAsStringAsync();
         JsonNode? actual = JsonNode.Parse(actualJson);
         JsonNode? expected = JsonNode.Parse(await File.ReadAllTextAsync(DatasetPath(dataset)));
         Assert.True(JsonNode.DeepEquals(expected, actual),
