@@ -14,7 +14,7 @@ public static class DependencyInjection
         CosmosSettings settings = configuration.GetSection("Cosmos").Get<CosmosSettings>() ?? new();
         if (!settings.IsValid())
             throw new InvalidOperationException(
-                "Configure Cosmos endpoint, key, database and distinct mailbox containers. For local development, set Cosmos__Key to the key from the running emulator.");
+                "Configure local Cosmos emulator endpoint, key, database and distinct mailbox containers. For local development, set Cosmos__Key to the key from the running emulator.");
 
         services.TryAddSingleton(settings);
         // CosmosClient is thread-safe and owns connection pools; share one per host.

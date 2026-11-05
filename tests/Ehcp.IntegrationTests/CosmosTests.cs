@@ -10,7 +10,7 @@ public sealed class EmulatorFactAttribute : FactAttribute
 {
     public EmulatorFactAttribute()
     {
-        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("EHCP_TEST_COSMOS_KEY")))
+        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("EHCP_TEST_COSMOS_KEY") ?? new CosmosSettings().Key) )
             Skip = "Set EHCP_TEST_COSMOS_KEY and optionally EHCP_TEST_COSMOS_ENDPOINT to run against a trusted local emulator.";
     }
 }
@@ -22,7 +22,7 @@ public sealed class CosmosTests
         var settings = new CosmosSettings
         {
             Endpoint = Environment.GetEnvironmentVariable("EHCP_TEST_COSMOS_ENDPOINT") ?? "https://localhost:8081",
-            Key = Environment.GetEnvironmentVariable("EHCP_TEST_COSMOS_KEY")!,
+            Key = Environment.GetEnvironmentVariable("EHCP_TEST_COSMOS_KEY") ?? new CosmosSettings().Key,
             Database = "ehcp-test-" + Guid.NewGuid().ToString("N"),
             Mailboxes = new Dictionary<string, MailboxSettings>
             {

@@ -10,7 +10,7 @@ ASP.NET Core Web API with eight CRUD operations, generated OpenAPI 3.0, Cosmos D
 ```powershell
 $env:Cosmos__Endpoint = 'https://localhost:8081'
 $env:Cosmos__Key = '<your-local-emulator-key>'
-$env:Cosmos__Database = 'ehcp-local'
+$env:Cosmos__Database = 'ehcp-team-shared-1'
 $env:Cosmos__Initialize = 'true'
 $env:ASPNETCORE_ENVIRONMENT = 'Development'
 

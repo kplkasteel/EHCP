@@ -18,7 +18,7 @@ $env:AzureWebJobsStorage = "UseDevelopmentStorage=true"
 $env:ProcessingQueueName = "ehcp-processing"
 $env:Cosmos__Endpoint = "https://localhost:8081"
 $env:Cosmos__Key = "<emulator key>"
-$env:Cosmos__Database = "ehcp-local"
+$env:Cosmos__Database = "ehcp-team-shared-1"
 $env:Cosmos__Initialize = "true"
 [Environment]::SetEnvironmentVariable("Cosmos__Mailboxes__ehcp-team-shared-1__EmailsContainer", "scenario-emails", "Process")
 [Environment]::SetEnvironmentVariable("Cosmos__Mailboxes__ehcp-team-shared-1__CasesContainer", "scenario-cases", "Process")

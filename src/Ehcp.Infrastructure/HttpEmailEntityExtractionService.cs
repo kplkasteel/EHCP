@@ -1,9 +1,10 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using Ehcp.Core;
 
 namespace Ehcp.Infrastructure;
 
-// Adapter for the configured EHCP extraction HTTP service. It does not assume an AI vendor.
+// HTTP adapter for the local mock extraction service.
 public sealed class HttpEmailEntityExtractionService(HttpClient http, ExtractionSettings settings)
     : IEmailEntityExtractionService
 {
@@ -11,15 +12,17 @@ public sealed class HttpEmailEntityExtractionService(HttpClient http, Extraction
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, settings.Endpoint)
         {
-            Content = JsonContent.Create(new { mailboxId, email },
-                options: CosmosDocumentStore<EmailDocument>.JsonOptions)
+            Content = new StringContent(
+                JsonSerializer.Serialize(
+                    new { mailboxId, email },
+                    CosmosDocumentStore<EmailDocument>.JsonOptions),
+                System.Text.Encoding.UTF8,
+                "application/json")
         };
-        if (!string.IsNullOrWhiteSpace(settings.ApiKey))
-            request.Headers.Add("X-Api-Key", settings.ApiKey);
         using HttpResponseMessage response = await http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<EmailExtraction>(
-            CosmosDocumentStore<EmailDocument>.JsonOptions, ct)
-            ?? throw new DocumentValidationException("Extraction response is empty.");
+                   CosmosDocumentStore<EmailDocument>.JsonOptions, ct)
+               ?? throw new DocumentValidationException("Extraction response is empty.");
     }
 }

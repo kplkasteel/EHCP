@@ -23,7 +23,7 @@ def configure_environment
   {
     'Cosmos__Endpoint' => 'https://localhost:8081',
     'Cosmos__Key' => EMULATOR_KEY,
-    'Cosmos__Database' => 'ehcp-local',
+    'Cosmos__Database' => 'ehcp-team-shared-1',
     'Cosmos__Initialize' => 'true',
     'ASPNETCORE_ENVIRONMENT' => 'Development',
     'Ehcp__BaseUrl' => BASE_URL,

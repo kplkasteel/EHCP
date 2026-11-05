@@ -29,17 +29,6 @@ public sealed class MockGraphFunctions
         return req.CreateResponse(HttpStatusCode.NoContent);
     }
 
-    [Function("GraphToken")]
-    public async Task<HttpResponseData> TokenAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "{tenant}/oauth2/v2.0/token")] HttpRequestData req,
-        string tenant)
-    {
-        HttpResponseData response = req.CreateResponse(HttpStatusCode.OK);
-        response.Headers.Add("Content-Type", "application/json");
-        await response.WriteStringAsync("{\"token_type\":\"Bearer\",\"expires_in\":3600,\"access_token\":\"mock\"}");
-        return response;
-    }
-
     [Function("GetGraphMessage")]
     public async Task<HttpResponseData> GetMessageAsync(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "v1.0/users/{user}/messages/{id}")] HttpRequestData req,

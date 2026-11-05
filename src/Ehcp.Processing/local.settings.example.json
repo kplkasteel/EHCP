@@ -5,10 +5,9 @@
     "AZURE_FUNCTIONS_ENVIRONMENT": "Development",
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "ProcessingQueueName": "ehcp-processing",
-    "Processing__Graph__Mode": "Mock",
-    "Processing__Graph__DataPath": "/absolute/path/to/scenario-1-single-child-graph-email.json",
-    "Processing__Extraction__Mode": "Mock",
-    "Processing__Extraction__DataPath": "/absolute/path/to/scenario-1-single-child-ai-extract.json",
-    "Cosmos__Key": "set-from-your-local-emulator"
+    "Cosmos__Key": "set-from-your-local-emulator",
+    "Processing__Graph__BaseUrl": "http://localhost:7101",
+    "Processing__Graph__Mailboxes__ehcp-team-shared-1": "ehcp-team-shared-1@example.com",
+    "Processing__Extraction__Endpoint": "http://localhost:7102/api/extract"
   }
 }

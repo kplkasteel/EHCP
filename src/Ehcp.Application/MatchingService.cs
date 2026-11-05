@@ -19,7 +19,10 @@ public sealed class MatchingService(
             await FoldAsync(mailboxId, candidates[0].EntityId, email, source, extraction, child, ct);
             return Result(child, ChildStatus.Folded, candidates[0].EntityId);
         }
-        if (string.IsNullOrWhiteSpace(child.Name) || child.DateOfBirth is null)
+        // A name and DOB alone do not authorize automatic case creation.
+        // Existing candidates are still matched above; a new case needs a strong identifier too.
+        if (string.IsNullOrWhiteSpace(child.Name) || child.DateOfBirth is null
+            || (string.IsNullOrWhiteSpace(child.NhsNumber) && string.IsNullOrWhiteSpace(child.CaseId)))
             return Result(child, ChildStatus.PendingMatch);
 
         // Deterministic IDs make retries converge even after a case write succeeded
@@ -93,3 +96,4 @@ public sealed class MatchingService(
             child.Relationships.Select(item => item with { UserStatus = null }).ToArray(),
             child.Attributes.Select(item => item with { UserStatus = null }).ToArray());
 }
+

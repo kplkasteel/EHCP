@@ -1,9 +1,6 @@
-using System.Net.Http;
-using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Azure.Storage.Queues;
-using Azure.Storage.Queues.Models;
 using Ehcp.Core;
 using Ehcp.Infrastructure;
 using Reqnroll;
@@ -18,10 +15,6 @@ public sealed partial class GetEmailSteps
 {
     private const string DataFolder = "data";
 
-    // Fallback wrapper shapes for the file-based mock adapters (Ehcp.Infrastructure.FixtureServices),
-    // used only when MockGraph__BaseUrl / MockExtraction__BaseUrl are unset.
-    // When set, the HTTP mock services receive the payloads via POST {base}/api/seed instead.
-    private sealed record GraphFixtureFile(string MailboxId, GraphEmail Email);
     private sealed record ExtractionFixtureFile(string MailboxId, string EmailId, EmailExtraction Result);
     private sealed record QueueMessageFile(string MailboxId, string EmailId, string GraphMessageId);
 
@@ -44,22 +37,24 @@ public sealed partial class GetEmailSteps
 
     private static readonly HttpClient SeedHttp = new();
 
-    private EmailExtraction? pendingExtraction;
-    private GraphEmail? pendingGraphEmail;
-    private GraphSeedMessage? pendingGraphMessage;
-    private readonly List<(string MailboxId, string Id)> seededDatasetDocuments = [];
-    private string? processingMailboxId;
-    private string? processingEmailId;
+    private readonly Dictionary<string, EmailDocument> _seededEmails = new();
+    private EmailExtraction? _pendingExtraction;
+    private GraphEmail? _pendingGraphEmail;
+    private GraphSeedMessage? _pendingGraphMessage;
+    private readonly List<(string MailboxId, string Id)> _seededDatasetDocuments = [];
+    private string? _processingMailboxId;
+    private string? _processingEmailId;
 
     [Given("the database is setup to contain {string}")]
     public async Task GivenTheDatabaseIsSetupToContainDataset(string dataset)
     {
         EmailDocument[] documents = await ReadDatasetAsync<EmailDocument[]>(dataset);
-        var store = new CosmosDocumentStore<EmailDocument>(client, settings);
+        var store = new CosmosDocumentStore<EmailDocument>(_client, _settings);
         foreach (EmailDocument document in documents)
         {
-            await store.CreateAsync(mailboxId, document, default);
-            seededDatasetDocuments.Add((mailboxId, document.Id));
+            await store.CreateAsync(_mailboxId, document, default);
+            _seededEmails[document.Id] = document;
+            _seededDatasetDocuments.Add((_mailboxId, document.Id));
         }
     }
 
@@ -69,41 +64,46 @@ public sealed partial class GetEmailSteps
         AiExtractDatasetFile file = await ReadDatasetAsync<AiExtractDatasetFile>(dataset);
         // Relevance/Reliability are recorded here only as a note: EmailExtraction (Ehcp.Core/Processing.cs)
         // has no fields for them, so they cannot be mapped onto anything the processor reads.
-        pendingExtraction = new EmailExtraction(file.ExtractedChildren);
+        _pendingExtraction = new EmailExtraction(file.ExtractedChildren);
     }
 
     [Given("we setup mock graph api to return dataset {string}")]
     public async Task GivenWeSetupMockGraphApiToReturnDataset(string dataset)
     {
         GraphEmailDatasetFile file = await ReadDatasetAsync<GraphEmailDatasetFile>(dataset);
-        // Direction and ReceivedDateTime cannot be mapped: the dataset file carries no explicit direction
-        // field (production infers it by comparing the sender address to the configured mailbox user,
-        // which Mock mode has no mailbox-user mapping for) and no receivedDateTime field at all. Both are
-        // filled with a fixed placeholder below rather than silently using "now", so a rerun is stable,
-        // but note the result will only match an expected-result.json that also expects these placeholders.
-        pendingGraphEmail = new GraphEmail(file.Id, file.ConversationId, Direction.inbound,
-            DateTimeOffset.Parse("2026-01-01T00:00:00Z"), file.Subject, file.Body.Content);
-        pendingGraphMessage = new GraphSeedMessage(file.Id, file.ConversationId,
-            DateTimeOffset.Parse("2026-01-01T00:00:00Z"), file.Subject, file.Body, file.From);
+        // The supplied Graph fixture omits receivedDateTime. Resolve it from the seeded
+        // application record at enqueue time rather than inventing a fixed timestamp.
+        _pendingGraphEmail = new GraphEmail(file.Id, file.ConversationId, Direction.inbound,
+            default, file.Subject, file.Body.Content);
+        _pendingGraphMessage = new GraphSeedMessage(file.Id, file.ConversationId,
+            default, file.Subject, file.Body, file.From);
     }
 
     [When("the email record {string} is added to the queue")]
     public async Task WhenTheEmailRecordIsAddedToTheQueue(string dataset)
     {
         QueueMessageFile message = await ReadDatasetAsync<QueueMessageFile>(dataset);
-        Assert.NotNull(pendingGraphEmail);
-        Assert.NotNull(pendingExtraction);
-        Assert.NotNull(pendingGraphMessage);
-        if (pendingGraphEmail.Id != message.GraphMessageId)
+        Assert.NotNull(_pendingGraphEmail);
+        Assert.NotNull(_pendingExtraction);
+        Assert.NotNull(_pendingGraphMessage);
+        if (_pendingGraphEmail.Id != message.GraphMessageId)
             throw new InvalidOperationException(
-                $"The graph-api dataset's id ('{pendingGraphEmail.Id}') does not match the queue " +
+                $"The graph-api dataset's id ('{_pendingGraphEmail.Id}') does not match the queue " +
                 $"message's graphMessageId ('{message.GraphMessageId}'); the mock will reject the request.");
 
-        await SeedMockAsync(MockGraphBaseUrl, pendingGraphMessage, GraphFixturePath, "Processing__Graph__DataPath",
-            new GraphFixtureFile(message.MailboxId, pendingGraphEmail));
-        var extractionFixture = new ExtractionFixtureFile(message.MailboxId, message.GraphMessageId, pendingExtraction);
-        await SeedMockAsync(MockExtractionBaseUrl, extractionFixture,
-            ExtractionFixturePath, "Processing__Extraction__DataPath", extractionFixture);
+        Assert.Equal(_mailboxId, message.MailboxId);
+        if (!_seededEmails.TryGetValue(message.EmailId, out EmailDocument? seededEmail))
+            throw new InvalidOperationException("Seed the application email before enqueueing this scenario.");
+        _pendingGraphEmail = _pendingGraphEmail with
+        {
+            Direction = seededEmail.Direction,
+            ReceivedDateTime = seededEmail.ReceivedDateTime
+        };
+        _pendingGraphMessage = _pendingGraphMessage with { ReceivedDateTime = seededEmail.ReceivedDateTime };
+
+        await SeedAsync(MockGraphBaseUrl, _pendingGraphMessage);
+        var extractionFixture = new ExtractionFixtureFile(message.MailboxId, message.GraphMessageId, _pendingExtraction);
+        await SeedAsync(MockExtractionBaseUrl, extractionFixture);
 
         var queue = new QueueClient(AzureWebJobsStorage, ProcessingQueueName,
             new QueueClientOptions { MessageEncoding = QueueMessageEncoding.Base64 });
@@ -113,31 +113,35 @@ public sealed partial class GetEmailSteps
             CosmosDocumentStore<EmailDocument>.JsonOptions);
         await queue.SendMessageAsync(payload);
 
-        processingMailboxId = message.MailboxId;
-        processingEmailId = message.EmailId;
+        _processingMailboxId = message.MailboxId;
+        _processingEmailId = message.EmailId;
     }
 
     [When("we wait for the database processing status to be {string}")]
     public async Task WhenWeWaitForTheDatabaseProcessingStatusToBe(string status)
     {
-        Assert.NotNull(processingMailboxId);
-        Assert.NotNull(processingEmailId);
+        Assert.NotNull(_processingMailboxId);
+        Assert.NotNull(_processingEmailId);
         EmailProcessingStatus expected = Enum.Parse<EmailProcessingStatus>(status);
-        var store = new CosmosDocumentStore<EmailDocument>(client, settings);
+        var store = new CosmosDocumentStore<EmailDocument>(_client, _settings);
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         EmailProcessingStatus? last = null;
-        while (!timeout.IsCancellationRequested)
+        try
         {
-            try
+            while (!timeout.IsCancellationRequested)
             {
-                StoredDocument<EmailDocument> stored = await store.ReadAsync(processingMailboxId, processingEmailId, default);
-                last = stored.Document.Status;
-                if (last == expected) return;
+                try
+                {
+                    StoredDocument<EmailDocument> stored = await store.ReadAsync(_processingMailboxId, _processingEmailId, timeout.Token);
+                    last = stored.Document.Status;
+                    if (last == expected) return;
+                }
+                catch (DocumentStoreException error) when (error.Failure == StoreFailure.NotFound) { }
+                await Task.Delay(TimeSpan.FromMilliseconds(500), timeout.Token);
             }
-            catch (DocumentStoreException error) when (error.Failure == StoreFailure.NotFound) { }
-            await Task.Delay(TimeSpan.FromMilliseconds(500));
         }
-        Assert.Fail($"Timed out waiting for '{processingEmailId}' to reach status '{status}'. " +
+        catch (OperationCanceledException) when (timeout.IsCancellationRequested) { }
+        Assert.Fail($"Timed out waiting for '{_processingEmailId}' to reach status '{status}'. " +
             $"Last observed status: {last?.ToString() ?? "(document not found)"}. " +
             "Is the Ehcp.Processing function host running against the same Azurite instance?");
     }
@@ -145,9 +149,9 @@ public sealed partial class GetEmailSteps
     [Then("the email record should be retrieved matching {string}")]
     public async Task ThenTheEmailRecordShouldBeRetrievedMatching(string dataset)
     {
-        Assert.NotNull(response);
-        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-        string actualJson = await response.Content.ReadAsStringAsync();
+        Assert.NotNull(_response);
+        Assert.Equal(System.Net.HttpStatusCode.OK, _response.StatusCode);
+        string actualJson = await _response.Content.ReadAsStringAsync();
         JsonNode? actual = JsonNode.Parse(actualJson);
         JsonNode? expected = JsonNode.Parse(await File.ReadAllTextAsync(DatasetPath(dataset)));
         Assert.True(JsonNode.DeepEquals(expected, actual),
@@ -171,8 +175,8 @@ public sealed partial class GetEmailSteps
     [AfterScenario]
     public async Task RemoveSeededDatasetDocuments()
     {
-        var store = new CosmosDocumentStore<EmailDocument>(client, settings);
-        foreach ((string seededMailbox, string id) in seededDatasetDocuments)
+        var store = new CosmosDocumentStore<EmailDocument>(_client, _settings);
+        foreach ((string seededMailbox, string id) in _seededDatasetDocuments)
         {
             try
             {
@@ -195,26 +199,18 @@ public sealed partial class GetEmailSteps
             ?? throw new InvalidOperationException($"Dataset '{dataset}' is empty.");
     }
 
-    // Seeds the HTTP mock when its base URL is configured, otherwise writes the file the file-based mock reads.
-    private static Task SeedMockAsync<TFile>(string? baseUrl, object httpPayload,
-        string? fixturePath, string fixtureSetting, TFile filePayload) =>
-        baseUrl is not null
-            ? SeedAsync(baseUrl, httpPayload)
-            : WriteFixtureAsync(fixturePath, fixtureSetting, filePayload);
-
     private static async Task SeedAsync(string baseUrl, object payload)
     {
-        using HttpResponseMessage response = await SeedHttp.PostAsync($"{baseUrl.TrimEnd('/')}/api/seed",
-            JsonContent.Create(payload, options: CosmosDocumentStore<EmailDocument>.JsonOptions));
+        string json = JsonSerializer.Serialize(
+            payload, CosmosDocumentStore<EmailDocument>.JsonOptions);
+
+        using var content = new StringContent(
+            json, System.Text.Encoding.UTF8, "application/json");
+
+        using HttpResponseMessage response = await SeedHttp.PostAsync(
+            $"{baseUrl.TrimEnd('/')}/api/seed", content);
+
         response.EnsureSuccessStatusCode();
     }
 
-    private static async Task WriteFixtureAsync<T>(string? path, string fixtureSetting, T fixture)
-    {
-        if (path is null)
-            throw new InvalidOperationException(
-                $"{fixtureSetting} must be set to an absolute path (see src/Ehcp.Processing/local.settings.example.json) " +
-                "so this step can write the fixture the running Function host reads.");
-        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(fixture, CosmosDocumentStore<EmailDocument>.JsonOptions));
-    }
 }
