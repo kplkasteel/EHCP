@@ -78,7 +78,7 @@ public sealed partial class GetEmailSteps : IDisposable
 
      [When(@"a request is made to the \/mailbox\/{string}\/cases\/{string} endpoint")]
       public async Task WhenARequestIsMadeToTheMailboxCasesEndpoint(string mailbox, string caseId) =>
-        response = await http.GetAsync($"/api/mailboxes/{Uri.EscapeDataString(mailbox)}/emails/{Uri.EscapeDataString(caseId)}");
+        _response = await _http.GetAsync($"/api/mailboxes/{Uri.EscapeDataString(mailbox)}/emails/{Uri.EscapeDataString(caseId)}");
 
 
     [When(@"a request is made to the \/mailbox\/{string}\/emails\/{string} endpoint")]
