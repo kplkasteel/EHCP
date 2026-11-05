@@ -1,0 +1,20 @@
+{
+  "relevance": true,
+  "reliability": true,
+  "extractedChildren": [
+    {
+      "name": "Alex Example",
+      "nhsNumber": "987 654 3210",
+      "dateOfBirth": "2016-03-14",
+      "relationships": [
+        {
+          "type": "parent",
+          "name": "Sam Example",
+          "email": "sam.example@example.com",
+          "phone": null
+        }
+      ],
+      "attributes": []
+    }
+  ]
+}

@@ -155,6 +155,19 @@ public sealed partial class GetEmailSteps
             $"Actual:\n{actual?.ToJsonString(new JsonSerializerOptions { WriteIndented = true })}");
     }
 
+    [Then("the case record should be retrieved matching {string}")]
+    public async Task ThenTheCaseRecordShouldBeRetrievedMatching(string dataset)
+    {
+        Assert.NotNull(response);
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        string actualJson = await response.Content.ReadAsStringAsync();
+        JsonNode? actual = JsonNode.Parse(actualJson);
+        JsonNode? expected = JsonNode.Parse(await File.ReadAllTextAsync(DatasetPath(dataset)));
+        Assert.True(JsonNode.DeepEquals(expected, actual),
+            $"Response did not match '{dataset}'.\nExpected:\n{expected?.ToJsonString(new JsonSerializerOptions { WriteIndented = true })}\n" +
+            $"Actual:\n{actual?.ToJsonString(new JsonSerializerOptions { WriteIndented = true })}");
+    }
+
     [AfterScenario]
     public async Task RemoveSeededDatasetDocuments()
     {
