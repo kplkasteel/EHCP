@@ -1,5 +1,7 @@
 require 'net/http'
 require 'rbconfig'
+require 'socket'
+require 'tmpdir'
 
 SOLUTION = 'Ehcp.slnx'
 # Public Cosmos emulator key (same default as CosmosSettings); override with Cosmos__Key.
@@ -60,6 +62,41 @@ def wait_for_http(pid, name, url, timeout: 60)
     abort "#{name} not ready after #{timeout}s." if Time.now > deadline
     sleep 1
   end
+end
+
+AZURITE_PORTS = [10000, 10001, 10002].freeze
+
+def port_open?(port)
+  TCPSocket.new('127.0.0.1', port).close
+  true
+rescue SystemCallError, IOError
+  false
+end
+
+# Starts Azurite (blob, queue, table) with the flags the Specs hook expects, unless all ports already answer.
+def start_azurite(timeout: 60)
+  open = AZURITE_PORTS.map { |port| port_open?(port) }
+  return nil if open.all?
+  abort 'Azurite is partially running. Stop the existing instance and rerun.' if open.any?
+
+  args = ['--silent', '--skipApiVersionCheck',
+          '--blobHost', '127.0.0.1', '--blobPort', '10000',
+          '--queueHost', '127.0.0.1', '--queuePort', '10001',
+          '--tableHost', '127.0.0.1', '--tablePort', '10002',
+          '--location', File.join(Dir.tmpdir, 'ehcp-specs-azurite')]
+  pid = if Gem.win_platform?
+          Process.spawn('cmd', '/d', '/s', '/c', 'azurite', *args)
+        else
+          Process.spawn('azurite', *args)
+        end
+
+  deadline = Time.now + timeout
+  until AZURITE_PORTS.all? { |port| port_open?(port) }
+    abort 'Azurite exited before becoming ready.' if Process.waitpid(pid, Process::WNOHANG)
+    abort "Azurite not ready after #{timeout}s." if Time.now > deadline
+    sleep 1
+  end
+  pid
 end
 
 def stop_process(pid)
@@ -171,14 +208,13 @@ task wip: :env do
     '--logger', 'trx', '--results-directory', 'tests/Ehcp.Specs/TestResults'
 end
 
-desc 'Build, run unit tests, start services (rake up), run Reqnroll specs, stop services'
+desc 'Build, run unit tests, start Azurite, run Reqnroll specs (hook starts API and hosts), stop Azurite'
 task go: :unit do
-  pids = start_services
+  azurite = start_azurite
   begin
-    wait_for_services(pids)
     Rake::Task[:specs].invoke
   ensure
-    stop_services(pids)
+    stop_process(azurite) if azurite
   end
 end
 
