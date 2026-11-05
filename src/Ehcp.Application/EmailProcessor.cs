@@ -14,7 +14,9 @@ public sealed class EmailProcessor(
         DocumentRules.ValidateId(message.EmailId);
         if (string.IsNullOrWhiteSpace(message.GraphMessageId))
             throw new DocumentValidationException("graphMessageId is required.");
+            //JL COMMENT/QUESTION: Do we know what happens if thrown here? Can we add a wrapper to log the exception and then put the queue message into a poison queue? We could add a test to check this behaviour.
 
+        
         StoredDocument<EmailDocument> current = await ReadOrCreateAsync(message, ct);
         if (current.Document.Status == EmailProcessingStatus.Processed) return;
         current = await emails.ReplaceAsync(message.MailboxId, message.EmailId,
@@ -23,9 +25,11 @@ public sealed class EmailProcessor(
         {
             GraphEmail source = await graph.GetEmailAsync(message.MailboxId, message.GraphMessageId, ct);
             if (source.Id != message.GraphMessageId)
-                throw new DocumentValidationException("Graph returned a different message.");
+                throw new DocumentValidationException("Graph returned a different message."); //JL COMMENT/QUESTION: Do we know what happens if thrown here? Can we add a wrapper to log the exception and then put the queue message into a poison queue? We could add a test to check this behaviour.
+
             EmailExtraction extraction = await extractor.ExtractAsync(message.MailboxId, source, ct);
-            EmailDocument result = current.Document with
+            
+            EmailDocument result = current.Document with //JL COMMENT/QUESTION: We should check if extraction children returned anything first and exit early if not. This is not an exception, it should be an early return. Lets add a test for this.
             {
                 ConversationId = source.ConversationId,
                 Direction = source.Direction,
@@ -33,7 +37,7 @@ public sealed class EmailProcessor(
                 Children = extraction.Children?.Select(child => new ChildResult(
                     child.Name, ChildStatus.Unprocessed, child.NhsNumber, child.CaseId, child.DateOfBirth,
                     null, [], child.Relationships, child.Attributes)).ToArray()
-                    ?? throw new DocumentValidationException("Extraction children are required.")
+                    ?? throw new DocumentValidationException("Extraction children are required.") 
             };
             // Validate the whole extraction before any matching can write cases.
             DocumentRules.Validate(result);
@@ -52,7 +56,7 @@ public sealed class EmailProcessor(
                     current.Document with { Status = EmailProcessingStatus.Failed }, current.ETag, ct);
             }
             catch (DocumentStoreException error) when (error.Failure == StoreFailure.PreconditionFailed) { }
-            // Let the queue runtime retry and ultimately poison the message.
+            // Let the queue runtime retry and ultimately poison the message. //JL COMMENT/QUESTION: is this setup in config?
             throw;
         }
     }
