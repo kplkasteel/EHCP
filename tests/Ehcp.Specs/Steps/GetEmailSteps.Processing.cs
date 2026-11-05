@@ -151,12 +151,38 @@ public sealed partial class GetEmailSteps
     {
         Assert.NotNull(_response);
         Assert.Equal(System.Net.HttpStatusCode.OK, _response.StatusCode);
-        string actualJson = await _response.Content.ReadAsStringAsync();
-        JsonNode? actual = JsonNode.Parse(actualJson);
-        JsonNode? expected = JsonNode.Parse(await File.ReadAllTextAsync(DatasetPath(dataset)));
+
+        JsonNode? actual = JsonNode.Parse(
+            await _response.Content.ReadAsStringAsync());
+
+        JsonNode? expected = JsonNode.Parse(
+            await File.ReadAllTextAsync(DatasetPath(dataset)));
+
+        Assert.NotNull(actual);
+        Assert.NotNull(expected);
+        Assert.NotNull(actual["receivedDateTime"]);
+        Assert.NotNull(expected["receivedDateTime"]);
+
+        var culture = System.Globalization.CultureInfo.InvariantCulture;
+
+        DateTimeOffset actualDate = DateTimeOffset.Parse(
+            actual["receivedDateTime"]!.GetValue<string>(), culture);
+
+        DateTimeOffset expectedDate = DateTimeOffset.Parse(
+            expected["receivedDateTime"]!.GetValue<string>(), culture);
+
+        Assert.Equal(expectedDate, actualDate);
+
+        // Dates match; use the same representation for the JSON comparison.
+        actual["receivedDateTime"] =
+            expected["receivedDateTime"]!.GetValue<string>();
+
+        var options = new JsonSerializerOptions { WriteIndented = true };
+
         Assert.True(JsonNode.DeepEquals(expected, actual),
-            $"Response did not match '{dataset}'.\nExpected:\n{expected?.ToJsonString(new JsonSerializerOptions { WriteIndented = true })}\n" +
-            $"Actual:\n{actual?.ToJsonString(new JsonSerializerOptions { WriteIndented = true })}");
+            $"Response did not match '{dataset}'.\n" +
+            $"Expected:\n{expected.ToJsonString(options)}\n" +
+            $"Actual:\n{actual.ToJsonString(options)}");
     }
 
     [Then("the case record should be retrieved matching {string}")]
