@@ -15,7 +15,11 @@ public sealed class MatchingService(
         GraphEmail source,
         EmailExtraction extraction,
         ExtractedChild child, //JL COMMENT/QUESTION: Can we prove out this pattern by adding a second module which is for debt complaints. i.e. it extracts a 'Resident' instead of a child. Doesn't need to do anything complex, just to prove the processing pattern can replicate across different use cases and makes sure our code is able to be extended easlily (before we get further).
-        //PK Answer: I'd try one sample debt complaint with a mock resident extractor to see which steps we can share.
+        //PK Answer: Yes, I'd start small and build on it. I'd take one sample debt complaint
+        // email and use a mock extractor to return the resident's name and complaint reference.
+        // That gives us a simple way to check which parts of the email processing we can reuse
+        // and where we've assumed we're always dealing with a child. We can build on that
+        // once we've proved the basic flow works.
         CancellationToken ct)
     {
         // Name and DOB alone do not authorize automatic matching or case creation.
