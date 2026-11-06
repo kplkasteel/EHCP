@@ -15,6 +15,7 @@ public sealed class MatchingService(
         GraphEmail source,
         EmailExtraction extraction,
         ExtractedChild child, //JL COMMENT/QUESTION: Can we prove out this pattern by adding a second module which is for debt complaints. i.e. it extracts a 'Resident' instead of a child. Doesn't need to do anything complex, just to prove the processing pattern can replicate across different use cases and makes sure our code is able to be extended easlily (before we get further).
+        //PK Answer: I'd try one sample debt complaint with a mock resident extractor to see which steps we can share.
         CancellationToken ct)
     {
         // Name and DOB alone do not authorize automatic matching or case creation.
@@ -29,6 +30,7 @@ public sealed class MatchingService(
 
         if (candidates.Count > 1 
             || candidates.Any(candidate => Contradicts(child, candidate))) //JL COMMENT/QUESTION: Not sure this is correct but we can keep an eye on it when we get to writing scenarios for conflicts.
+            //PK Answer: Multiple candidates or conflicting identifiers or dates of birth go to Conflict. I'd review a same-NHS-number, different-DOB example with Jamie.
         {
             return Result(child, ChildStatus.Conflict, candidates: candidates);
         }
@@ -42,8 +44,9 @@ public sealed class MatchingService(
             return Result(child, ChildStatus.Folded, candidates[0].EntityId);
         }
 
-        // Creating a new case also requires a name and date of birth. //JL COMMENT/QUESTION: Requires a ID + NAME, but not DOB. Lets write a test for this.
-        if (string.IsNullOrWhiteSpace(child.Name) || child.DateOfBirth is null)
+        // Creating a new case also requires a name. //JL COMMENT/QUESTION: Requires a ID + NAME, but not DOB. Lets write a test for this.
+        //PK Answer: Agreed. With no existing match, a name plus an NHS number or case ID is enough to open a case. DOB is optional.
+        if (string.IsNullOrWhiteSpace(child.Name))
         {
             return Result(child, ChildStatus.PendingMatch);
         }
@@ -82,6 +85,7 @@ public sealed class MatchingService(
             // A previous attempt may already have created this case.
         }
         //JL COMMENT/QUESTION: What is fold doing here that create isnt doing above in the try catch?
+        //PK Answer: Create opens the case. Fold links the email and adds the extracted facts. On a retry it can finish that work on the same case.
         await FoldAsync(
             mailboxId, entityId, email, source, extraction, child, ct);
 

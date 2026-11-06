@@ -15,6 +15,7 @@ public sealed class EmailProcessor(
         if (string.IsNullOrWhiteSpace(message.GraphMessageId))
             throw new DocumentValidationException("graphMessageId is required.");
             //JL COMMENT/QUESTION: Do we know what happens if thrown here? Can we add a wrapper to log the exception and then put the queue message into a poison queue? We could add a test to check this behaviour.
+            //PK Answer: This fails before we open the email record. I'd test that the queue retries it and that the logs identify the failed message.
 
         
         StoredDocument<EmailDocument> current = await ReadOrCreateAsync(message, ct);
@@ -26,10 +27,12 @@ public sealed class EmailProcessor(
             GraphEmail source = await graph.GetEmailAsync(message.MailboxId, message.GraphMessageId, ct);
             if (source.Id != message.GraphMessageId)
                 throw new DocumentValidationException("Graph returned a different message."); //JL COMMENT/QUESTION: Do we know what happens if thrown here? Can we add a wrapper to log the exception and then put the queue message into a poison queue? We could add a test to check this behaviour.
+                //PK Answer: Here we try to mark the email as Failed and rethrow. I'd check that the wrong email never reaches extraction or matching.
 
             EmailExtraction extraction = await extractor.ExtractAsync(message.MailboxId, source, ct);
             
             EmailDocument result = current.Document with //JL COMMENT/QUESTION: We should check if extraction children returned anything first and exit early if not. This is not an exception, it should be an early return. Lets add a test for this.
+            //PK Answer: An empty list already skips matching and saves the email as Processed. I'd keep a missing list as a retryable error, pending agreement.
             {
                 ConversationId = source.ConversationId,
                 Direction = source.Direction,
@@ -57,6 +60,7 @@ public sealed class EmailProcessor(
             }
             catch (DocumentStoreException error) when (error.Failure == StoreFailure.PreconditionFailed) { }
             // Let the queue runtime retry and ultimately poison the message. //JL COMMENT/QUESTION: is this setup in config?
+            //PK Answer: Yes. The processing host.json sets five attempts and a five-second retry delay. I'd verify poison-queue delivery in a local test.
             throw;
         }
     }
