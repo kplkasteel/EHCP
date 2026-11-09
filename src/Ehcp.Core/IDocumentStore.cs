@@ -9,7 +9,11 @@ public interface IDocumentStore<T> where T : class
     Task DeleteAsync(string mailboxId, string id, string etag, CancellationToken cancellationToken);
 }
 public enum StoreFailure { NotFound, Conflict, PreconditionFailed, Unavailable }
-public sealed class DocumentStoreException(StoreFailure failure) : Exception("Document storage operation failed.")
+public sealed class DocumentStoreException(
+    StoreFailure failure,
+    string? message = null,
+    Exception? innerException = null)
+    : Exception(message ?? "Document storage operation failed.", innerException)
 {
     public StoreFailure Failure { get; } = failure;
 }

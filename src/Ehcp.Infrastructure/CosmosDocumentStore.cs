@@ -64,7 +64,7 @@ public sealed class CosmosDocumentStore<T>(CosmosClient client, CosmosSettings s
                 HttpStatusCode.Conflict => StoreFailure.Conflict,
                 HttpStatusCode.PreconditionFailed => StoreFailure.PreconditionFailed,
                 _ => StoreFailure.Unavailable
-            });
+            }, error.Message, error);
         }
     }
 }
