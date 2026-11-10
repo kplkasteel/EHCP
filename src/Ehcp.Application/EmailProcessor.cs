@@ -23,9 +23,9 @@ public sealed class EmailProcessor(
 
         
         StoredDocument<EmailDocument> current = await ReadOrCreateAsync(message, ct);
-        if (current.Document.Status == EmailProcessingStatus.Processed) return;
+        if (current.Document.Status is EmailProcessingStatus.Processed or EmailProcessingStatus.Discarded) return;
         current = await emails.ReplaceAsync(message.MailboxId, message.EmailId,
-            current.Document with { Status = EmailProcessingStatus.Processing }, current.ETag, ct);
+            current.Document with { Status = EmailProcessingStatus.Processing, Rationale = null }, current.ETag, ct);
         try
         {
             GraphEmail source = await graph.GetEmailAsync(message.MailboxId, message.GraphMessageId, ct);
@@ -48,6 +48,31 @@ public sealed class EmailProcessor(
             };
             // Validate the whole extraction before any matching can write cases.
             DocumentRules.Validate(result);
+            if (extraction.Relevance == false)
+            {
+                result = result with
+                {
+                    Children = [],
+                    Status = EmailProcessingStatus.Discarded,
+                    Rationale = string.IsNullOrWhiteSpace(extraction.Rationale)
+                        ? "Email was marked as not relevant."
+                        : extraction.Rationale
+                };
+                DocumentRules.Validate(result);
+                await emails.ReplaceAsync(message.MailboxId, message.EmailId, result, current.ETag, ct);
+                return;
+            }
+            if (extraction.Children.Count == 0)
+            {
+                result = result with
+                {
+                    Status = EmailProcessingStatus.Discarded,
+                    Rationale = "No child information was extracted from the email."
+                };
+                DocumentRules.Validate(result);
+                await emails.ReplaceAsync(message.MailboxId, message.EmailId, result, current.ETag, ct);
+                return;
+            }
             var children = new List<ChildResult>();
             foreach (ExtractedChild child in extraction.Children)
                 children.Add(await matching.MatchAsync(message.MailboxId, result, source, extraction, child, ct));
@@ -60,7 +85,7 @@ public sealed class EmailProcessor(
             try
             {
                 await emails.ReplaceAsync(message.MailboxId, message.EmailId,
-                    current.Document with { Status = EmailProcessingStatus.Failed }, current.ETag, ct);
+                    current.Document with { Status = EmailProcessingStatus.Failed, Rationale = null }, current.ETag, ct);
             }
             catch (DocumentStoreException error) when (error.Failure == StoreFailure.PreconditionFailed) { }
             // Let the queue runtime retry and ultimately poison the message. //JL COMMENT/QUESTION: is this setup in config?

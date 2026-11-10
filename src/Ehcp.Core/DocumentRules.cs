@@ -21,6 +21,8 @@ public static class DocumentRules
         Required(document.ConversationId, "conversationId");
         if (!Enum.IsDefined(document.Direction) || document.ReceivedDateTime == default)
             throw new DocumentValidationException("A valid direction and receivedDateTime are required.");
+        if ((document.Status == EmailProcessingStatus.Discarded) != !string.IsNullOrWhiteSpace(document.Rationale))
+            throw new DocumentValidationException("A rationale must be set exactly when status is Discarded.");
         RequireList(document.Children, "children");
         foreach (ChildResult child in document.Children)
         {

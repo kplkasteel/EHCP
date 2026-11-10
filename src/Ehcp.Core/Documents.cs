@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Ehcp.Core;
 
 public enum ConfidenceBand
@@ -64,7 +66,8 @@ public sealed record EmailDocument(
     Direction Direction,
     DateTimeOffset ReceivedDateTime,
     IReadOnlyList<ChildResult> Children,
-    EmailProcessingStatus Status = EmailProcessingStatus.Unprocessed);
+    EmailProcessingStatus Status = EmailProcessingStatus.Unprocessed,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Rationale = null);
 
 public sealed record Communication(
     string EmailId,

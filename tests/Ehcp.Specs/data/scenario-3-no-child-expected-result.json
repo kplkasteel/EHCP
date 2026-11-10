@@ -1,0 +1,9 @@
+{
+  "id": "scenario-3-no-child",
+  "conversationId": "spec-thread-003",
+  "direction": "inbound",
+  "receivedDateTime": "2026-11-01T09:00:00+00:00",
+  "children": [],
+  "status": "Discarded",
+  "rationale": "No child information was extracted from the email."
+}

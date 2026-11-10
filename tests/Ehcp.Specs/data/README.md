@@ -6,7 +6,8 @@ Naming: `scenario-<n>-<slug>-<role>.json`. Roles: `data`, `queue`, `graph-email`
 |---|---|---|---|
 | 1 | GetEmail | Single child extracted, insufficient for a case: status `Processed`, child `PendingMatch` | `scenario-1-single-child-*` |
 | 2 | GetEmail | Single child extracted, sufficient information for a case: status `Processed`, child `Folded` | `scenario-2-single-child-*` |
-| 3 | GetEmail | No child extracted, represents a 'discarded' state with a rationale recorded. | `scenario-2-no-child-*` |
+| 3 | GetEmail | No child extracted, discarded status with rationale recorded. | `scenario-3-no-child-*` |
+| 4 | GetEmail | Irrelevant out-of-office email is discarded with its rationale. | `scenario-4-out-of-office-*` |
 
 Scenarios without fixtures use inline values in the feature file.
 

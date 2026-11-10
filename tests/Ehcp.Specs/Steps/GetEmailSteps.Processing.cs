@@ -18,9 +18,9 @@ public sealed partial class GetEmailSteps
     private sealed record ExtractionFixtureFile(string MailboxId, string EmailId, EmailExtraction Result);
     private sealed record QueueMessageFile(string MailboxId, string EmailId, string GraphMessageId);
 
-    // Human-authored shape of the committed ai-extract dataset files: richer than EmailExtraction
-    // (adds relevance/reliability flags that nothing in Ehcp.Core/Ehcp.Application consumes yet).
-    private sealed record AiExtractDatasetFile(bool Relevance, bool Reliability, IReadOnlyList<ExtractedChild> ExtractedChildren);
+    // Human-authored shape of the committed ai-extract dataset files; reliability remains fixture metadata.
+    private sealed record AiExtractDatasetFile(
+        bool Relevance, bool Reliability, IReadOnlyList<ExtractedChild> ExtractedChildren, string? Rationale = null);
 
     // Human-authored shape of the committed graph-email dataset files: a trimmed Microsoft Graph
     // message payload, not the plain GraphEmail record the mock adapter deserializes into.
@@ -62,9 +62,8 @@ public sealed partial class GetEmailSteps
     public async Task GivenWeSetupMockAiExtractionToReturnDataset(string dataset)
     {
         AiExtractDatasetFile file = await ReadDatasetAsync<AiExtractDatasetFile>(dataset);
-        // Relevance/Reliability are recorded here only as a note: EmailExtraction (Ehcp.Core/Processing.cs)
-        // has no fields for them, so they cannot be mapped onto anything the processor reads.
-        _pendingExtraction = new EmailExtraction(file.ExtractedChildren);
+        _pendingExtraction = new EmailExtraction(
+            file.ExtractedChildren, Relevance: file.Relevance, Rationale: file.Rationale);
     }
 
     [Given("we setup mock graph api to return dataset {string}")]
