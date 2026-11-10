@@ -13,7 +13,17 @@
       "dateOfBirth": "2016-03-14",
       "matchedCaseId": "scenario-2-single-child-caseId",
       "possibleCaseMatches": [],
-      "relationships": [],
+      "relationships": [
+        {
+          "type": "parent",
+          "name": "Sam Example",
+          "email": "sam.example@example.com",
+          "phone": null,
+          "confidenceBand": "VeryLow",
+          "userStatus": null,
+          "sourceEmailId": null
+        }
+      ],
       "attributes": []
     }
   ]

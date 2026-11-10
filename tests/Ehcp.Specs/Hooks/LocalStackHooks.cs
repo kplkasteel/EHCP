@@ -13,5 +13,5 @@ public static class LocalStackHooks
     public static Task StartAsync() => Startup.Value;
 
     [AfterTestRun(Order = 10000)]
-    public static void Stop() => LocalTestStack.Stop();
+    public static Task StopAsync() => LocalTestStack.StopAsync();
 }
