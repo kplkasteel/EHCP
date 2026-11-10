@@ -198,12 +198,14 @@ task up: :build do
 end
 
 desc 'Run Reqnroll specs against already running services (see rake up)'
-task specs: :env do
+task specs: [:build, :env] do
+  ENV['EHCP_SKIP_HOST_BUILD'] = '1'
   dotnet 'test', 'tests/Ehcp.Specs', '--no-build', '--logger', 'trx', '--results-directory', 'tests/Ehcp.Specs/TestResults'
 end
 
 desc 'Run only @wip-tagged Reqnroll specs against already running services (see rake up)'
-task wip: :env do
+task wip: [:build, :env] do
+  ENV['EHCP_SKIP_HOST_BUILD'] = '1'
   dotnet 'test', 'tests/Ehcp.Specs', '--no-build', '--filter', 'Category=wip',
     '--logger', 'trx', '--results-directory', 'tests/Ehcp.Specs/TestResults'
 end

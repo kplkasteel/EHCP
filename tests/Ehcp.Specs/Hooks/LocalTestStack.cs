@@ -79,10 +79,19 @@ internal static class LocalTestStack
                 new CosmosClientOptions { ConnectionMode = ConnectionMode.Gateway, RequestTimeout = TimeSpan.FromSeconds(5) });
             await Wait("Cosmos emulator (including trusted TLS certificate)", async () => { await cosmos.ReadAccountAsync(); return true; });
 
-            await StartHost("API", "Ehcp.Api", 5100, false);
-            await StartHost("MockGraph", "Ehcp.MockGraph", 7101, true);
-            await StartHost("MockExtraction", "Ehcp.MockExtraction", 7102, true);
-            await StartHost("Processing", "Ehcp.Processing", 7103, true);
+            // Builds stay sequential: hosts share project references, so parallel builds can race on obj/.
+            if (Environment.GetEnvironmentVariable("EHCP_SKIP_HOST_BUILD") != "1")
+            {
+                await BuildHost("API", "Ehcp.Api");
+                await BuildHost("MockGraph", "Ehcp.MockGraph");
+                await BuildHost("MockExtraction", "Ehcp.MockExtraction");
+                await BuildHost("Processing", "Ehcp.Processing");
+            }
+            await Task.WhenAll(
+                StartHost("API", "Ehcp.Api", 5100, false, buildProject: false),
+                StartHost("MockGraph", "Ehcp.MockGraph", 7101, true, buildProject: false),
+                StartHost("MockExtraction", "Ehcp.MockExtraction", 7102, true, buildProject: false),
+                StartHost("Processing", "Ehcp.Processing", 7103, true, buildProject: false));
             started = true;
         }
         catch (Exception ex)
@@ -128,14 +137,8 @@ internal static class LocalTestStack
         // Refuse occupied application ports: a manually running host can have incompatible settings.
         if (await PortOpen(port)) throw new InvalidOperationException($"Port {port} is already in use. Stop the manually started {name} host before running tests.");
         string directory = Path.Combine(root, "src", project);
-        if (buildProject)
-        {
-            Process build = Launch("build-" + name, directory, "dotnet", "build", project + ".csproj",
-                "--configuration", "Debug", "--framework", "net10.0", "--nologo");
-            using (var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(3)))
-                await build.WaitForExitAsync(timeout.Token);
-            if (build.ExitCode != 0) throw new InvalidOperationException($"{name} build failed; see build-{name}.log.");
-        }
+        if (buildProject && Environment.GetEnvironmentVariable("EHCP_SKIP_HOST_BUILD") != "1")
+            await BuildHost(name, project);
         string functionRoot = Path.Combine(directory, "bin", "Debug", "net10.0");
         string[] expectedFunctions = project switch
         {
@@ -185,6 +188,15 @@ internal static class LocalTestStack
             }
             return true;
         }, host);
+    }
+
+    private static async Task BuildHost(string name, string project)
+    {
+        Process build = Launch("build-" + name, Path.Combine(root, "src", project), "dotnet", "build", project + ".csproj",
+            "--configuration", "Debug", "--framework", "net10.0", "--nologo");
+        using (var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(3)))
+            await build.WaitForExitAsync(timeout.Token);
+        if (build.ExitCode != 0) throw new InvalidOperationException($"{name} build failed; see build-{name}.log.");
     }
 
     private static Process Launch(string name, string directory, string executable, params string[] args)

@@ -154,7 +154,7 @@ public sealed partial class GetEmailSteps
             await _response.Content.ReadAsStringAsync());
 
         JsonNode? expected = JsonNode.Parse(
-            await File.ReadAllTextAsync(DatasetPath(dataset)));
+            await RenderDatasetAsync(dataset));
 
         Assert.NotNull(actual);
         Assert.NotNull(expected);
@@ -178,6 +178,7 @@ public sealed partial class GetEmailSteps
             expectedChildren[i]!["matchedCaseId"] = actualId;
         }
 
+        ProjectAttributes(expected, actual);
         var options = new JsonSerializerOptions { WriteIndented = true };
 
         Assert.True(JsonNode.DeepEquals(expected, actual),
@@ -193,9 +194,10 @@ public sealed partial class GetEmailSteps
         Assert.Equal(System.Net.HttpStatusCode.OK, _response.StatusCode);
         string actualJson = await _response.Content.ReadAsStringAsync();
         JsonNode? actual = JsonNode.Parse(actualJson);
-        JsonNode? expected = JsonNode.Parse(await File.ReadAllTextAsync(DatasetPath(dataset)));
+        JsonNode? expected = JsonNode.Parse(await RenderDatasetAsync(dataset));
         Assert.NotNull(actual);
         Assert.NotNull(expected);
+        ProjectAttributes(expected, actual);
         if (expected["id"] is JsonNode expectedId)
             expected["id"] = ResolveCaseId(expectedId.GetValue<string>());
         if (expected["entityId"] is JsonNode expectedEntityId)
@@ -279,10 +281,10 @@ public sealed partial class GetEmailSteps
 
     private static string DatasetPath(string dataset) => Path.Combine(AppContext.BaseDirectory, DataFolder, dataset);
 
-    private static async Task<T> ReadDatasetAsync<T>(string dataset)
+    private async Task<T> ReadDatasetAsync<T>(string dataset)
     {
-        await using FileStream stream = File.OpenRead(DatasetPath(dataset));
-        return await JsonSerializer.DeserializeAsync<T>(stream, CosmosDocumentStore<EmailDocument>.JsonOptions)
+        string text = await RenderDatasetAsync(dataset);
+        return JsonSerializer.Deserialize<T>(text, CosmosDocumentStore<EmailDocument>.JsonOptions)
             ?? throw new InvalidOperationException($"Dataset '{dataset}' is empty.");
     }
 

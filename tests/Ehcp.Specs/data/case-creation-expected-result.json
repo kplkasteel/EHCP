@@ -1,30 +1,30 @@
 {
-  "id": "scenario-2-single-child",
-  "conversationId": "spec-thread-002",
+  "id": "{{emailId}}",
+  "conversationId": "{{conversationId}}",
   "direction": "inbound",
   "status": "Processed",
   "receivedDateTime": "2026-11-01T09:00:00Z",
   "children": [
     {
-      "name": "Alex Example",
+      "name": {{childName:json}},
       "status": "Folded",
-      "nhsNumber": "987 654 3210",
+      "nhsNumber": {{nhsNumber:json}},
       "caseId": null,
-      "dateOfBirth": "2016-03-14",
-      "matchedCaseId": "scenario-2-single-child-caseId",
+      "dateOfBirth": {{dateOfBirth:json}},
+      "matchedCaseId": "{{caseAlias}}",
       "possibleCaseMatches": [],
       "relationships": [
         {
           "type": "parent",
-          "name": "Sam Example",
-          "email": "sam.example@example.com",
+          "name": "{{parentName}}",
+          "email": "{{parentEmail}}",
           "phone": null,
           "confidenceBand": "VeryLow",
           "userStatus": null,
           "sourceEmailId": null
         }
       ],
-      "attributes": []
+      "attributes": {{expectedAttributes}}
     }
   ]
 }
