@@ -1,0 +1,34 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('ehcp-team-shared-1%40example.com')/messages/$entity",
+  "id": "AAMkAGE1-spec-scenario-3-no-child",
+  "hasAttachments": false,
+  "subject": "Request for support",
+  "conversationId": "spec-thread-003",
+  "body": {
+    "contentType": "text",
+    "content": "Hello, I am looking for information about the support services available."
+  },
+  "sender": {
+    "emailAddress": {
+      "name": "Sam Example",
+      "address": "sam.example@example.com"
+    }
+  },
+  "from": {
+    "emailAddress": {
+      "name": "Sam Example",
+      "address": "sam.example@example.com"
+    }
+  },
+  "toRecipients": [
+    {
+      "emailAddress": {
+        "name": "Ehcp team",
+        "address": "ehcp-team@example.com"
+      }
+    }
+  ],
+  "ccRecipients": [],
+  "bccRecipients": [],
+  "replyTo": []
+}

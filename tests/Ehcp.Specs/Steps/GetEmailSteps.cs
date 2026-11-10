@@ -67,7 +67,7 @@ public sealed partial class GetEmailSteps : IDisposable
     [Given("the database is setup to contain an email with id {string} and processing status {string}")]
     public async Task GivenTheDatabaseContainsAnEmail(string emailId, string status)
     {
-        // "status" here is the email-level EmailProcessingStatus (Unprocessed/Processing/Processed/Failed),
+        // "status" here is the email-level EmailProcessingStatus (Unprocessed/Processing/Processed/Failed/Discarded),
         // not the per-child ChildStatus; the child itself is left at its default Unprocessed state.
         ChildResult child = new(null, ChildStatus.Unprocessed, null, null, null, null, [], [], []);
         _seeded = new EmailDocument(emailId, "spec-thread", Direction.inbound, DateTimeOffset.UtcNow, [child],

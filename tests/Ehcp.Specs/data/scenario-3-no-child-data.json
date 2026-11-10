@@ -1,0 +1,10 @@
+[
+  {
+    "id": "scenario-3-no-child",
+    "conversationId": "spec-thread-003",
+    "direction": "inbound",
+    "status": "Unprocessed",
+    "receivedDateTime": "2026-11-01T09:00:00Z",
+    "children": []
+  }
+]

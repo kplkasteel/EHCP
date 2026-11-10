@@ -1,6 +1,6 @@
 namespace Ehcp.Core;
 
-public enum EmailProcessingStatus { Unprocessed, Processing, Processed, Failed }
+public enum EmailProcessingStatus { Unprocessed, Processing, Processed, Failed, Discarded }
 
 // EmailId is the Cosmos-safe application key; GraphMessageId is the unmodified Graph key.
 public sealed record ProcessEmailMessage(string MailboxId, string EmailId, string GraphMessageId);
@@ -13,7 +13,11 @@ public sealed record ExtractedChild(
     string? Name, string? NhsNumber, string? CaseId, DateOnly? DateOfBirth,
     IReadOnlyList<Relationship> Relationships, IReadOnlyList<CaseAttribute> Attributes);
 
-public sealed record EmailExtraction(IReadOnlyList<ExtractedChild> Children, string? Summary = null);
+public sealed record EmailExtraction(
+    IReadOnlyList<ExtractedChild> Children,
+    string? Summary = null,
+    bool? Relevance = null,
+    string? Rationale = null);
 
 public interface IGraphAPIService
 {

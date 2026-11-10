@@ -48,3 +48,23 @@ Scenario: Email with child information extracted and enough information should c
 	Then the email record should be retrieved matching "scenario-2-single-child-expected-result.json"
 	When a request is made to the /mailbox/"ehcp-team-shared-1"/cases/"scenario-2-single-child-caseId" endpoint
 	Then the case record should be retrieved matching "scenario-2-single-child-expected-case-result.json"
+
+Scenario: Email with no child information is discarded with a rationale
+	Given the mailbox "ehcp-team-shared-1" is selected
+	And the database is setup to contain "scenario-3-no-child-data.json"
+	And we setup mock ai extraction to return dataset "scenario-3-no-child-ai-extract.json"
+	And we setup mock graph api to return dataset "scenario-3-no-child-graph-email.json"
+	When the email record "scenario-3-no-child-queue.json" is added to the queue
+	And we wait for the database processing status to be "Discarded"
+	When a request is made to the /mailbox/"ehcp-team-shared-1"/emails/"scenario-3-no-child" endpoint
+	Then the email record should be retrieved matching "scenario-3-no-child-expected-result.json"
+
+Scenario: An out-of-office reply is discarded with its rationale
+	Given the mailbox "ehcp-team-shared-1" is selected
+	And the database is setup to contain "scenario-4-out-of-office-data.json"
+	And we setup mock ai extraction to return dataset "scenario-4-out-of-office-ai-extract.json"
+	And we setup mock graph api to return dataset "scenario-4-out-of-office-graph-email.json"
+	When the email record "scenario-4-out-of-office-queue.json" is added to the queue
+	And we wait for the database processing status to be "Discarded"
+	When a request is made to the /mailbox/"ehcp-team-shared-1"/emails/"scenario-4-out-of-office" endpoint
+	Then the email record should be retrieved matching "scenario-4-out-of-office-expected-result.json"

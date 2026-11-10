@@ -1,0 +1,34 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('ehcp-team-shared-1%40example.com')/messages/$entity",
+  "id": "AAMkAGE1-spec-scenario-4-out-of-office",
+  "hasAttachments": false,
+  "subject": "Automatic reply: Out of office",
+  "conversationId": "spec-thread-004",
+  "body": {
+    "contentType": "text",
+    "content": "I am currently out of the office and will respond when I return."
+  },
+  "sender": {
+    "emailAddress": {
+      "name": "Automatic Replies",
+      "address": "no-reply@example.com"
+    }
+  },
+  "from": {
+    "emailAddress": {
+      "name": "Automatic Replies",
+      "address": "no-reply@example.com"
+    }
+  },
+  "toRecipients": [
+    {
+      "emailAddress": {
+        "name": "Ehcp team",
+        "address": "ehcp-team@example.com"
+      }
+    }
+  ],
+  "ccRecipients": [],
+  "bccRecipients": [],
+  "replyTo": []
+}

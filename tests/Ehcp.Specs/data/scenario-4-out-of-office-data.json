@@ -1,0 +1,10 @@
+[
+  {
+    "id": "scenario-4-out-of-office",
+    "conversationId": "spec-thread-004",
+    "direction": "inbound",
+    "status": "Unprocessed",
+    "receivedDateTime": "2026-11-01T09:00:00Z",
+    "children": []
+  }
+]
