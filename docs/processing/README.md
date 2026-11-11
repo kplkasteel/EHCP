@@ -28,10 +28,11 @@ $env:Processing__Extraction__Mode = "Mock"
 $env:Processing__Extraction__DataPath = (Resolve-Path docs/processing/sample-ai-extract.json).Path
 ```
 
-Every host needs these settings in its own process. Run the application:
+Every host needs these settings in its own process. Run the API:
 
 ```powershell
-dotnet run --project src/Ehcp.Api
+Set-Location src/Ehcp.ApiFunctions
+func start --dotnet-isolated --port 5100
 ```
 
 In a second terminal with the same settings, run the queue-triggered Function:
@@ -49,8 +50,9 @@ Development; production containers must be provisioned separately.
 ## Seed, enqueue and read
 
 sample-data.json has emails and cases arrays. Both are empty for this sample.
-For other scenarios, seed the selected mailbox containers directly or use
-the existing POST /api/mailboxes/{mailboxId}/emails and /cases endpoints.
+For other scenarios, seed the selected mailbox containers directly. The
+API exposes only GET endpoints for emails and cases; POST seeding endpoints
+no longer exist.
 
 From the repository root, using Azure CLI against Azurite:
 

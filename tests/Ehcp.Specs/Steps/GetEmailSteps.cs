@@ -40,11 +40,6 @@ public sealed partial class GetEmailSteps : IDisposable
 
     public GetEmailSteps()
     {
-        LocalServices.RequireEndpoint(CosmosEndpoint);
-        LocalServices.RequireEndpoint(EhcpBaseUrl);
-        LocalServices.RequireEndpoint(MockGraphBaseUrl);
-        LocalServices.RequireEndpoint(MockExtractionBaseUrl);
-        LocalServices.RequireAzurite(AzureWebJobsStorage);
         _client = new CosmosClient(_settings.Endpoint, _settings.Key, new CosmosClientOptions
         {
             ConnectionMode = ConnectionMode.Gateway,

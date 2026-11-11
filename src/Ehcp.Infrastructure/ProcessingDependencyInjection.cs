@@ -11,9 +11,6 @@ public static class ProcessingDependencyInjection
     {
         GraphSettings graph = configuration.GetSection("Processing:Graph").Get<GraphSettings>() ?? new();
         ExtractionSettings extraction = configuration.GetSection("Processing:Extraction").Get<ExtractionSettings>() ?? new();
-        LocalServices.RequireEndpoint(graph.BaseUrl);
-        LocalServices.RequireEndpoint(extraction.Endpoint);
-        LocalServices.RequireAzurite(configuration["AzureWebJobsStorage"]);
         if (graph.Mailboxes.Count == 0 || graph.Mailboxes.Values.Any(string.IsNullOrWhiteSpace))
             throw new InvalidOperationException("Configure Processing:Graph:Mailboxes for mock email direction detection.");
         services.AddSingleton(graph);

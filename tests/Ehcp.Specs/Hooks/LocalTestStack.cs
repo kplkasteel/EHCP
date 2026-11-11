@@ -23,8 +23,16 @@ internal static class LocalTestStack
     internal static string DatabaseName { get; private set; } = "";
     private static string queueName = "";
 
+    // EHCP_TARGET=remote: hosts and storage are already deployed; start nothing and never delete their database.
+    internal static bool IsRemote => string.Equals(Environment.GetEnvironmentVariable("EHCP_TARGET"), "remote", StringComparison.OrdinalIgnoreCase);
+
     public static async Task StartAsync()
     {
+        if (IsRemote)
+        {
+            DatabaseName = Environment.GetEnvironmentVariable("Cosmos__Database") ?? "";
+            return;
+        }
         root = FindRoot();
         logs = Path.Combine(root, "tests", "Ehcp.Specs", "TestResults", "local-stack", DateTime.UtcNow.ToString("yyyyMMdd-HHmmss") + "-" + Environment.ProcessId);
         Directory.CreateDirectory(logs);
@@ -82,13 +90,13 @@ internal static class LocalTestStack
             // Builds stay sequential: hosts share project references, so parallel builds can race on obj/.
             if (Environment.GetEnvironmentVariable("EHCP_SKIP_HOST_BUILD") != "1")
             {
-                await BuildHost("API", "Ehcp.Api");
+                await BuildHost("API", "Ehcp.ApiFunctions");
                 await BuildHost("MockGraph", "Ehcp.MockGraph");
                 await BuildHost("MockExtraction", "Ehcp.MockExtraction");
                 await BuildHost("Processing", "Ehcp.Processing");
             }
             await Task.WhenAll(
-                StartHost("API", "Ehcp.Api", 5100, false, buildProject: false),
+                StartHost("API", "Ehcp.ApiFunctions", 5100, true, buildProject: false),
                 StartHost("MockGraph", "Ehcp.MockGraph", 7101, true, buildProject: false),
                 StartHost("MockExtraction", "Ehcp.MockExtraction", 7102, true, buildProject: false),
                 StartHost("Processing", "Ehcp.Processing", 7103, true, buildProject: false));
@@ -145,6 +153,7 @@ internal static class LocalTestStack
             "Ehcp.MockGraph" => ["SeedGraphMessage", "GetGraphMessage"],
             "Ehcp.MockExtraction" => ["SeedExtraction", "Extract"],
             "Ehcp.Processing" => ["ProcessEmail"],
+            "Ehcp.ApiFunctions" => ["GetCase", "GetEmail"],
             _ => []
         };
         if (function)
@@ -171,8 +180,6 @@ internal static class LocalTestStack
             using var response = await Http.GetAsync($"http://localhost:{port}/" + (function ? "admin/host/status" : ""));
             if (!response.IsSuccessStatusCode) return false;
             using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            if (!function)
-                return json.RootElement.TryGetProperty("name", out var value) && value.GetString() == "EHCP API";
             if (!json.RootElement.TryGetProperty("state", out var state) || state.GetString() != "Running")
                 return false;
 
@@ -345,13 +352,15 @@ internal static class LocalTestStack
         }
     }
 
-    internal static Task StartProcessingAsync() => StartHost("Processing", "Ehcp.Processing", 7103, true, buildProject: false);
+    internal static Task StartProcessingAsync() =>
+        IsRemote ? Task.CompletedTask : StartHost("Processing", "Ehcp.Processing", 7103, true, buildProject: false);
 
     internal static async Task StopAsync()
     {
         try
         {
             if (!started) return;
+            // Guarded by started: a remote run never reaches here, so the deployed database is not deleted.
             StopProcessing();
             var queues = new QueueServiceClient("UseDevelopmentStorage=true");
             await queues.GetQueueClient(queueName).DeleteIfExistsAsync();

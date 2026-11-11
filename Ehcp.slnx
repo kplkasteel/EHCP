@@ -6,7 +6,7 @@
     <Project Path="src/Ehcp.MockExtraction/Ehcp.MockExtraction.csproj" />
     <Project Path="src/Ehcp.Core/Ehcp.Core.csproj" />
     <Project Path="src/Ehcp.Infrastructure/Ehcp.Infrastructure.csproj" />
-    <Project Path="src/Ehcp.Api/Ehcp.Api.csproj" />
+    <Project Path="src/Ehcp.ApiFunctions/Ehcp.ApiFunctions.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Ehcp.Tests/Ehcp.Tests.csproj" />

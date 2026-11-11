@@ -1,3 +1,5 @@
+require 'fileutils'
+require 'json'
 require 'net/http'
 require 'rbconfig'
 require 'socket'
@@ -7,6 +9,7 @@ SOLUTION = 'Ehcp.slnx'
 # Public Cosmos emulator key (same default as CosmosSettings); override with Cosmos__Key.
 EMULATOR_KEY = 'C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw=='.freeze
 BASE_URL = ENV.fetch('Ehcp__BaseUrl', 'http://localhost:5100')
+API_DIR = 'src/Ehcp.ApiFunctions'
 PROCESSING_DIR = 'src/Ehcp.Processing'
 MOCK_GRAPH_DIR = 'src/Ehcp.MockGraph'
 MOCK_EXTRACTION_DIR = 'src/Ehcp.MockExtraction'
@@ -16,10 +19,41 @@ MOCK_GRAPH_URL = "http://localhost:#{MOCK_GRAPH_PORT}".freeze
 MOCK_EXTRACTION_URL = "http://localhost:#{MOCK_EXTRACTION_PORT}".freeze
 # Placeholder Graph identity; the mock Graph service ignores the credentials and tenant.
 MOCK_GRAPH_ID = '00000000-0000-0000-0000-000000000000'.freeze
+LIVINGDOC_CONFIG = 'tests/Ehcp.Specs/livingdocgen.json'
 
 def dotnet(*args)
   sh 'dotnet', *args
 end
+
+# Azure sandbox. Must already exist; override with EHCP_RESOURCE_GROUP.
+RESOURCE_GROUP = ENV.fetch('EHCP_RESOURCE_GROUP', 'jamie-lupton-sandbox-rg')
+AZ_DEPLOYMENT = 'ehcp'
+# Publish output and zips kept after each deploy, for manual config-zip runs.
+DEPLOY_ARTIFACTS = 'artifacts/deploy'
+# Function App output name => project. Each app is deployed separately.
+AZURE_APPS = {
+  'processingAppName' => 'src/Ehcp.Processing',
+  'apiAppName' => 'src/Ehcp.ApiFunctions',
+  'mockGraphAppName' => 'src/Ehcp.MockGraph',
+  'mockExtractionAppName' => 'src/Ehcp.MockExtraction'
+}.freeze
+
+def az(*args)
+  sh "az #{args.join(' ')}"
+end
+
+def az_capture(*args)
+  # String form runs through the shell so the Windows az.cmd shim resolves.
+  output = IO.popen("az #{args.join(' ')}", err: File::NULL, &:read)
+  abort "az #{args.first(2).join(' ')} failed." unless $?.success?
+  output.strip
+end
+
+def deployment_outputs
+  JSON.parse(az_capture('deployment', 'group', 'show', '--resource-group', RESOURCE_GROUP,
+    '--name', AZ_DEPLOYMENT, '--query', 'properties.outputs', '--output', 'json')).transform_values { |v| v['value'] }
+end
+
 
 def configure_environment
   {
@@ -124,7 +158,7 @@ end
 # Starts the API, Processing host and both mock services. Returns { name => pid }.
 def start_services
   {
-    'API' => Process.spawn('dotnet', 'run', '--no-build', '--project', 'src/Ehcp.Api'),
+    'API' => Process.spawn('func', 'start', '--dotnet-isolated', '--port', URI(BASE_URL).port.to_s, chdir: API_DIR),
     'Processing' => Process.spawn('func', 'start', chdir: PROCESSING_DIR),
     'MockGraph' => Process.spawn('func', 'start', '--dotnet-isolated', '--port', MOCK_GRAPH_PORT.to_s, chdir: MOCK_GRAPH_DIR),
     'MockExtraction' => Process.spawn('func', 'start', '--dotnet-isolated', '--port', MOCK_EXTRACTION_PORT.to_s, chdir: MOCK_EXTRACTION_DIR)
@@ -172,9 +206,9 @@ task unit: :build do
   dotnet 'test', 'tests/Ehcp.Tests', '--no-build'
 end
 
-desc 'Run API in the foreground'
+desc 'Run the API (Azure Functions, port 5100) in the foreground'
 task run: :build do
-  dotnet 'run', '--no-build', '--project', 'src/Ehcp.Api'
+  Dir.chdir(API_DIR) { sh 'func', 'start', '--dotnet-isolated', '--port', URI(BASE_URL).port.to_s }
 end
 
 desc 'Run the Processing function host in the foreground'
@@ -218,6 +252,109 @@ task go: :unit do
   ensure
     stop_process(azurite) if azurite
   end
+end
+
+# Packs each Function App with func pack and zip-deploys it. Outputs come from the last Bicep deployment.
+def publish_function_apps(outputs, only: nil)
+  FileUtils.mkdir_p(DEPLOY_ARTIFACTS)
+  # func pack reads the worker runtime from here; there is no local.settings.json in these projects.
+  ENV['FUNCTIONS_WORKER_RUNTIME'] = 'dotnet-isolated'
+  AZURE_APPS.each do |output, project|
+    next if only && !only.include?(output)
+    # func pack writes <ProjectName>.zip into the --output folder; move it to a stable name.
+    pack_dir = File.join(DEPLOY_ARTIFACTS, output)
+    FileUtils.mkdir_p(pack_dir)
+    # String form so the Windows func.cmd shim resolves.
+    sh "func pack #{project} --output #{pack_dir}"
+    zip = File.join(DEPLOY_ARTIFACTS, "#{output}.zip")
+    FileUtils.mv(Dir.glob(File.join(pack_dir, '*.zip')).first, zip)
+    FileUtils.rm_rf(pack_dir)
+    puts "Zip for #{output}: #{File.expand_path(zip)}"
+    # Freshly created apps can time out on the SCM endpoint, so retry before failing.
+    3.times do |attempt|
+      az 'functionapp', 'deployment', 'source', 'config-zip', '--resource-group', RESOURCE_GROUP,
+        '--name', outputs[output], '--src', zip, '--output', 'none'
+      break
+    rescue RuntimeError
+      raise if attempt == 2
+      puts "Zip deploy to #{outputs[output]} failed; retrying in 30s (attempt #{attempt + 2}/3)."
+      sleep 30
+    end
+  end
+end
+
+desc 'Deploy the Azure sandbox into the existing resource group: Bicep infrastructure, then publish the four Function Apps'
+task :deploy do
+  az 'deployment', 'group', 'create', '--resource-group', RESOURCE_GROUP, '--name', AZ_DEPLOYMENT,
+    '--template-file', 'infra/main.bicep', '--output', 'none'
+  outputs = deployment_outputs
+  publish_function_apps(outputs)
+  puts "Deployed. API: #{outputs['apiUrl']}"
+end
+
+# Short names accepted by publish_apps; keys are the AZURE_APPS output names.
+PUBLISH_APP_NAMES = {
+  'processing' => 'processingAppName',
+  'api' => 'apiAppName',
+  'mock-graph' => 'mockGraphAppName',
+  'mock-extraction' => 'mockExtractionAppName'
+}.freeze
+
+desc 'Republish Function Apps only. rake "publish_apps[api]" for one; no argument publishes all four. No Bicep.'
+task :publish_apps, [:app] do |_, args|
+  only = nil
+  if args[:app]
+    only = [PUBLISH_APP_NAMES.fetch(args[:app]) do
+      abort "Unknown app '#{args[:app]}'. Use one of: #{PUBLISH_APP_NAMES.keys.join(', ')}."
+    end]
+  end
+  outputs = deployment_outputs
+  publish_function_apps(outputs, only: only)
+  puts "Published. API: #{outputs['apiUrl']}"
+end
+
+def run_remote_specs(*extra_args)
+  outputs = deployment_outputs
+  ENV['EHCP_TARGET'] = 'remote'
+  ENV['Ehcp__BaseUrl'] = outputs['apiUrl']
+  ENV['MockGraph__BaseUrl'] = outputs['mockGraphUrl']
+  ENV['MockExtraction__BaseUrl'] = outputs['mockExtractionUrl']
+  ENV['Cosmos__Endpoint'] = outputs['cosmosEndpoint']
+  ENV['Cosmos__Database'] = outputs['databaseName']
+  ENV['Cosmos__Key'] = az_capture('cosmosdb', 'keys', 'list', '--name', outputs['cosmosAccountName'],
+    '--resource-group', RESOURCE_GROUP, '--query', 'primaryMasterKey', '--output', 'tsv')
+  ENV['AzureWebJobsStorage'] = az_capture('storage', 'account', 'show-connection-string',
+    '--name', outputs['storageAccountName'], '--resource-group', RESOURCE_GROUP,
+    '--query', 'connectionString', '--output', 'tsv')
+  ENV['ProcessingQueueName'] = outputs['queueName']
+  ENV['EHCP_TEST_COSMOS_KEY'] = ENV['Cosmos__Key']
+  ENV['EHCP_TEST_COSMOS_ENDPOINT'] = ENV['Cosmos__Endpoint']
+  warn 'WARNING: remote specs delete all documents in the sandbox email and case containers, scenario by scenario.'
+  with_livingdoc_title("Ehcp Specs - remote: #{URI(outputs['apiUrl']).host}") do
+    dotnet 'test', 'tests/Ehcp.Specs', '--no-build', *extra_args,
+      '--logger', 'trx', '--results-directory', 'tests/Ehcp.Specs/TestResults'
+  end
+end
+
+# LivingDocGen reads its title from livingdocgen.json at report time. Set it for one run, then restore the file.
+def with_livingdoc_title(title)
+  original = File.read(LIVINGDOC_CONFIG)
+  config = JSON.parse(original)
+  config['title'] = title
+  File.write(LIVINGDOC_CONFIG, JSON.pretty_generate(config))
+  yield
+ensure
+  File.write(LIVINGDOC_CONFIG, original) if original
+end
+
+desc 'Run Reqnroll specs against the deployed Azure sandbox (run rake deploy first)'
+task test_remote: :build do
+  run_remote_specs
+end
+
+desc 'Run only @wip-tagged specs against the deployed Azure sandbox'
+task test_remote_wip: :build do
+  run_remote_specs('--filter', 'Category=wip')
 end
 
 task default: :go

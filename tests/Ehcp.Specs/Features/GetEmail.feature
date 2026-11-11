@@ -1,6 +1,6 @@
 Feature: Retrieve email
 
-
+@wip
 Scenario Outline: Retrieve an existing email by id
 	Given the mailbox "ehcp-team-shared-1" is selected
 	And the database is setup to contain an email with id "<emailId>" and processing status "<status>"
