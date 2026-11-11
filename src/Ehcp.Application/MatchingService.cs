@@ -14,7 +14,7 @@ public sealed class MatchingService(
         EmailDocument email,
         GraphEmail source,
         EmailExtraction extraction,
-        ExtractedChild child, //JL COMMENT/QUESTION: Can we prove out this pattern by adding a second module which is for debt complaints. i.e. it extracts a 'Resident' instead of a child. Doesn't need to do anything complex, just to prove the processing pattern can replicate across different use cases and makes sure our code is able to be extended easlily (before we get further).
+        ExtractedChild child, //JL COMMENT/QUESTION: Can we prove out this pattern by adding a second module which is for debt complaints. i.e. it extracts a 'Resident' instead of a child. Doesn't need to do anything complex, just to prove the processing pattern can replicate across different use cases and makes sure our code is able to be extended easily (before we get further).
         //PK Answer: Yes, I'd start small and build on it. I'd take one sample debt complaint
         // email and use a mock extractor to return the resident's name and complaint reference.
         // That gives us a simple way to check which parts of the email processing we can reuse
@@ -23,8 +23,8 @@ public sealed class MatchingService(
         CancellationToken ct)
     {
         // Name and DOB alone do not authorize automatic matching or case creation.
-        if (string.IsNullOrWhiteSpace(child.NhsNumber)
-            && string.IsNullOrWhiteSpace(child.CaseId))
+        StrongIdentifiers identifiers = StrongIdentifiers.From(child);
+        if (!identifiers.HasAny)
         {
             return Result(child, ChildStatus.PendingMatch);
         }
@@ -32,8 +32,8 @@ public sealed class MatchingService(
         IReadOnlyList<CaseDocument> candidates =
             await lookup.FindCandidatesAsync(mailboxId, child, ct);
 
-        if (candidates.Count > 1 
-            || candidates.Any(candidate => Contradicts(child, candidate))) //JL COMMENT/QUESTION: Not sure this is correct but we can keep an eye on it when we get to writing scenarios for conflicts.
+        if (identifiers.HasConflicts || candidates.Count > 1
+            || candidates.Any(candidate => Contradicts(child, candidate))) //JL COMMENT/QUESTION: Not sure if this is correct, but we can keep an eye on it when we get to writing scenarios for conflicts.
             //PK Answer: Multiple candidates or conflicting identifiers or dates of birth go to Conflict. I'd review a same-NHS-number, different-DOB example with Jamie.
         {
             return Result(child, ChildStatus.Conflict, candidates: candidates);
@@ -41,15 +41,17 @@ public sealed class MatchingService(
 
         if (candidates.Count == 1)
         {
-            await FoldAsync(
+            CaseDocument? conflict = await FoldAsync(
                 mailboxId, candidates[0].EntityId,
                 email, source, extraction, child, ct);
 
-            return Result(child, ChildStatus.Folded, candidates[0].EntityId);
+            return conflict is null
+                ? Result(child, ChildStatus.Folded, candidates[0].EntityId)
+                : Result(child, ChildStatus.Conflict, candidates: [conflict]);
         }
 
-        // Creating a new case also requires a name. //JL COMMENT/QUESTION: Requires a ID + NAME, but not DOB. Lets write a test for this.
-        //PK Answer: Agreed. With no existing match, a name plus an NHS number or case ID is enough to open a case. DOB is optional.
+        // Creating a new case also requires a name. //JL COMMENT/QUESTION: Requires an ID + NAME, but not DOB. Let's write a test for this.
+        //PK Answer: With no existing match, a name plus a strong identifier is enough to open a case. DOB is optional.
         if (string.IsNullOrWhiteSpace(child.Name))
         {
             return Result(child, ChildStatus.PendingMatch);
@@ -57,9 +59,10 @@ public sealed class MatchingService(
 
         // Deterministic IDs make retries converge even after a case write succeeds
         // but the final email write fails.
-        string identity = !string.IsNullOrWhiteSpace(child.NhsNumber)
-            ? "nhs:" + Normalize(child.NhsNumber)
-            : "case:" + Normalize(child.CaseId!);
+        string identity = identifiers.NhsNumbers.Count > 0 ? "nhs:" + identifiers.NhsNumbers[0]
+            : identifiers.CaseIds.Count > 0 ? "case:" + identifiers.CaseIds[0]
+            : identifiers.DfeIds.Count > 0 ? "dfe:" + identifiers.DfeIds[0]
+            : "mosaic:" + identifiers.MosaicIds[0];
 
         string entityId = "auto-" + Convert.ToHexString(
             SHA256.HashData(
@@ -88,15 +91,17 @@ public sealed class MatchingService(
         {
             // A previous attempt may already have created this case.
         }
-        //JL COMMENT/QUESTION: What is fold doing here that create isnt doing above in the try catch?
+        //JL COMMENT/QUESTION: What is fold doing here that create isn't doing above in the try catch?
         //PK Answer: Create opens the case. Fold links the email and adds the extracted facts. On a retry it can finish that work on the same case.
-        await FoldAsync(
+        CaseDocument? createdConflict = await FoldAsync(
             mailboxId, entityId, email, source, extraction, child, ct);
 
-        return Result(child, ChildStatus.Folded, entityId);
+        return createdConflict is null
+            ? Result(child, ChildStatus.Folded, entityId)
+            : Result(child, ChildStatus.Conflict, candidates: [createdConflict]);
     }
 
-    private async Task FoldAsync(
+    private async Task<CaseDocument?> FoldAsync(
         string mailboxId,
         string entityId,
         EmailDocument email,
@@ -114,15 +119,14 @@ public sealed class MatchingService(
 
             if (Contradicts(child, document))
             {
-                throw new DocumentValidationException(
-                    "Case identity changed during matching; retry for review.");
+                return document;
             }
 
-            var communications = document.Communications.ToList();
+            List<Communication> communications = [.. document.Communications];
 
-            if (!communications.Any(item => item.EmailId == email.Id))
+            if (communications.All(item => item.EmailId != email.Id))
             {
-                communications.Add(new(
+                communications.Add(new Communication(
                     email.Id,
                     email.Direction,
                     email.ReceivedDateTime,
@@ -149,7 +153,7 @@ public sealed class MatchingService(
                 }
             }
 
-            var attributes = document.Attributes.ToList();
+            List<CaseAttribute> attributes = [.. document.Attributes];
 
             foreach (CaseAttribute item in child.Attributes)
             {
@@ -184,7 +188,7 @@ public sealed class MatchingService(
                 await cases.ReplaceAsync(
                     mailboxId, entityId, updated, stored.ETag, ct);
 
-                return;
+                return null;
             }
             catch (DocumentStoreException error)
                 when (error.Failure == StoreFailure.PreconditionFailed
@@ -195,22 +199,15 @@ public sealed class MatchingService(
         }
     }
 
-    private static bool Contradicts(
-        ExtractedChild child,
-        CaseDocument candidate) =>
-        Different(child.NhsNumber, candidate.NhsNumber)
-        || Different(child.CaseId, candidate.CaseId)
-        || (child.DateOfBirth is not null
-            && candidate.DateOfBirth is not null
-            && child.DateOfBirth != candidate.DateOfBirth);
-
-    private static bool Different(string? first, string? second) =>
-        !string.IsNullOrWhiteSpace(first)
-        && !string.IsNullOrWhiteSpace(second)
-        && Normalize(first) != Normalize(second);
-
-    private static string Normalize(string value) =>
-        value.Trim().ToUpperInvariant();
+    private static bool Contradicts(ExtractedChild child, CaseDocument candidate)
+    {
+        StrongIdentifiers candidateIdentifiers = StrongIdentifiers.From(candidate);
+        return candidateIdentifiers.HasConflicts
+            || StrongIdentifiers.From(child).Contradicts(candidateIdentifiers)
+            || (child.DateOfBirth is not null
+                && candidate.DateOfBirth is not null
+                && child.DateOfBirth != candidate.DateOfBirth);
+    }
 
     private static ChildResult Result(
         ExtractedChild child,
@@ -228,10 +225,12 @@ public sealed class MatchingService(
                 .Select(candidate => new PossibleCaseMatch(
                     candidate.EntityId, ConfidenceBand.High))
                 .ToArray() ?? [],
-            child.Relationships
-                .Select(item => item with { UserStatus = null })
-                .ToArray(),
-            child.Attributes
-                .Select(item => item with { UserStatus = null })
-                .ToArray());
+            [
+                .. child.Relationships
+                    .Select(item => item with { UserStatus = null })
+            ],
+            [
+                .. child.Attributes
+                    .Select(item => item with { UserStatus = null })
+            ]);
 }
