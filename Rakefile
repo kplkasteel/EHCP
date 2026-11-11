@@ -330,6 +330,7 @@ def run_remote_specs(*extra_args)
   ENV['EHCP_TEST_COSMOS_KEY'] = ENV['Cosmos__Key']
   ENV['EHCP_TEST_COSMOS_ENDPOINT'] = ENV['Cosmos__Endpoint']
   warn 'WARNING: remote specs delete all documents in the sandbox email and case containers, scenario by scenario.'
+  Dir.glob('tests/Ehcp.Specs/TestResults/*.trx').each { |f| File.delete(f) }
   with_livingdoc_title("Ehcp Specs - remote: #{URI(outputs['apiUrl']).host}") do
     dotnet 'test', 'tests/Ehcp.Specs', '--no-build', *extra_args,
       '--logger', 'trx', '--results-directory', 'tests/Ehcp.Specs/TestResults'
