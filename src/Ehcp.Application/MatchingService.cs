@@ -26,7 +26,8 @@ public sealed class MatchingService(
         StrongIdentifiers identifiers = StrongIdentifiers.From(child);
         if (!identifiers.HasAny)
         {
-            return Result(child, ChildStatus.PendingMatch);
+            return Result(child, ChildStatus.PendingMatch,
+                possibleMatches: await FindPossibleMatchesAsync(mailboxId, child, ct));
         }
 
         IReadOnlyList<CaseDocument> candidates =
@@ -199,6 +200,23 @@ public sealed class MatchingService(
         }
     }
 
+    private async Task<IReadOnlyList<PossibleCaseMatch>> FindPossibleMatchesAsync(
+        string mailboxId, ExtractedChild child, CancellationToken ct)
+    {
+        if (child.DateOfBirth is not DateOnly dateOfBirth)
+        {
+            return [];
+        }
+
+        IReadOnlyList<CaseDocument> candidates =
+            await lookup.FindDateOfBirthCandidatesAsync(mailboxId, dateOfBirth, ct);
+
+        return candidates
+            .Select(candidate => PossibleMatchScorer.Score(child, candidate))
+            .OrderByDescending(match => match.Score)
+            .ToArray();
+    }
+
     private static bool Contradicts(ExtractedChild child, CaseDocument candidate)
     {
         StrongIdentifiers candidateIdentifiers = StrongIdentifiers.From(candidate);
@@ -213,7 +231,8 @@ public sealed class MatchingService(
         ExtractedChild child,
         ChildStatus status,
         string? entityId = null,
-        IReadOnlyList<CaseDocument>? candidates = null) =>
+        IReadOnlyList<CaseDocument>? candidates = null,
+        IReadOnlyList<PossibleCaseMatch>? possibleMatches = null) =>
         new(
             child.Name,
             status,
@@ -221,7 +240,7 @@ public sealed class MatchingService(
             child.CaseId,
             child.DateOfBirth,
             entityId,
-            candidates?
+            possibleMatches ?? candidates?
                 .Select(candidate => new PossibleCaseMatch(
                     candidate.EntityId, ConfidenceBand.High))
                 .ToArray() ?? [],

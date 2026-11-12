@@ -9,8 +9,6 @@ public sealed class CosmosCaseLookup(CosmosClient client, CosmosSettings setting
     public async Task<IReadOnlyList<CaseDocument>> FindCandidatesAsync(
         string mailboxId, ExtractedChild child, CancellationToken ct)
     {
-        if (!settings.Mailboxes.TryGetValue(mailboxId, out MailboxSettings? mailbox))
-            throw new DocumentStoreException(StoreFailure.NotFound);
         StrongIdentifiers identifiers = StrongIdentifiers.From(child);
         QueryDefinition query = new QueryDefinition("""
                                                     SELECT * FROM c WHERE
@@ -30,6 +28,22 @@ public sealed class CosmosCaseLookup(CosmosClient client, CosmosSettings setting
             .WithParameter("@mosaicIds", identifiers.MosaicIds)
             .WithParameter("@name", Normalize(child.Name))
             .WithParameter("@dob", child.DateOfBirth?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? "");
+        return await QueryAsync(mailboxId, query, ct);
+    }
+
+    public async Task<IReadOnlyList<CaseDocument>> FindDateOfBirthCandidatesAsync(
+        string mailboxId, DateOnly dateOfBirth, CancellationToken ct)
+    {
+        QueryDefinition query = new QueryDefinition("SELECT * FROM c WHERE c.dateOfBirth = @dob")
+            .WithParameter("@dob", dateOfBirth.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+        return await QueryAsync(mailboxId, query, ct);
+    }
+
+    private async Task<IReadOnlyList<CaseDocument>> QueryAsync(
+        string mailboxId, QueryDefinition query, CancellationToken ct)
+    {
+        if (!settings.Mailboxes.TryGetValue(mailboxId, out MailboxSettings? mailbox))
+            throw new DocumentStoreException(StoreFailure.NotFound);
         var result = new List<CaseDocument>();
         using FeedIterator<CaseDocument> iterator = client.GetContainer(settings.Database, mailbox.CasesContainer)
             .GetItemQueryIterator<CaseDocument>(query);
