@@ -18,9 +18,21 @@ internal static class LocalTestStack
     private static string root = "";
     private static string logs = "";
     private static FileStream? runLock;
+    private static Process? processingHost;
+    private static bool started;
+    internal static string DatabaseName { get; private set; } = "";
+    private static string queueName = "";
+
+    // EHCP_TARGET=remote: hosts and storage are already deployed; start nothing and never delete their database.
+    internal static bool IsRemote => string.Equals(Environment.GetEnvironmentVariable("EHCP_TARGET"), "remote", StringComparison.OrdinalIgnoreCase);
 
     public static async Task StartAsync()
     {
+        if (IsRemote)
+        {
+            DatabaseName = Environment.GetEnvironmentVariable("Cosmos__Database") ?? "";
+            return;
+        }
         root = FindRoot();
         logs = Path.Combine(root, "tests", "Ehcp.Specs", "TestResults", "local-stack", DateTime.UtcNow.ToString("yyyyMMdd-HHmmss") + "-" + Environment.ProcessId);
         Directory.CreateDirectory(logs);
@@ -75,10 +87,20 @@ internal static class LocalTestStack
                 new CosmosClientOptions { ConnectionMode = ConnectionMode.Gateway, RequestTimeout = TimeSpan.FromSeconds(5) });
             await Wait("Cosmos emulator (including trusted TLS certificate)", async () => { await cosmos.ReadAccountAsync(); return true; });
 
-            await StartHost("API", "Ehcp.Api", 5100, false);
-            await StartHost("MockGraph", "Ehcp.MockGraph", 7101, true);
-            await StartHost("MockExtraction", "Ehcp.MockExtraction", 7102, true);
-            await StartHost("Processing", "Ehcp.Processing", 7103, true);
+            // Builds stay sequential: hosts share project references, so parallel builds can race on obj/.
+            if (Environment.GetEnvironmentVariable("EHCP_SKIP_HOST_BUILD") != "1")
+            {
+                await BuildHost("API", "Ehcp.ApiFunctions");
+                await BuildHost("MockGraph", "Ehcp.MockGraph");
+                await BuildHost("MockExtraction", "Ehcp.MockExtraction");
+                await BuildHost("Processing", "Ehcp.Processing");
+            }
+            await Task.WhenAll(
+                StartHost("API", "Ehcp.ApiFunctions", 5100, true, buildProject: false),
+                StartHost("MockGraph", "Ehcp.MockGraph", 7101, true, buildProject: false),
+                StartHost("MockExtraction", "Ehcp.MockExtraction", 7102, true, buildProject: false),
+                StartHost("Processing", "Ehcp.Processing", 7103, true, buildProject: false));
+            started = true;
         }
         catch (Exception ex)
         {
@@ -90,6 +112,9 @@ internal static class LocalTestStack
     private static void Configure()
     {
         // Apply before any scenario bindings are constructed; child processes inherit these values.
+        string runId = Guid.NewGuid().ToString("N");
+        DatabaseName = "ehcp-specs-" + runId;
+        queueName = "ehcp-specs-" + runId;
         var values = new Dictionary<string, string>
         {
             ["ASPNETCORE_ENVIRONMENT"] = "Development",
@@ -97,9 +122,9 @@ internal static class LocalTestStack
             ["AZURE_FUNCTIONS_ENVIRONMENT"] = "Development",
             ["FUNCTIONS_WORKER_RUNTIME"] = "dotnet-isolated",
             ["AzureWebJobsStorage"] = "UseDevelopmentStorage=true",
-            ["ProcessingQueueName"] = "ehcp-processing",
+            ["ProcessingQueueName"] = queueName,
             ["Cosmos__Endpoint"] = "https://localhost:8081",
-            ["Cosmos__Database"] = " ehcp-team-shared-1",
+            ["Cosmos__Database"] = DatabaseName,
             ["Cosmos__Initialize"] = "true",
             ["Ehcp__BaseUrl"] = "http://localhost:5100",
             ["MockGraph__BaseUrl"] = "http://localhost:7101",
@@ -115,22 +140,20 @@ internal static class LocalTestStack
             Environment.SetEnvironmentVariable("Cosmos__Key", new CosmosSettings().Key);
     }
 
-    private static async Task StartHost(string name, string project, int port, bool function)
+    private static async Task StartHost(string name, string project, int port, bool function, bool buildProject = true)
     {
         // Refuse occupied application ports: a manually running host can have incompatible settings.
         if (await PortOpen(port)) throw new InvalidOperationException($"Port {port} is already in use. Stop the manually started {name} host before running tests.");
         string directory = Path.Combine(root, "src", project);
-        Process build = Launch("build-" + name, directory, "dotnet", "build", project + ".csproj",
-            "--configuration", "Debug", "--framework", "net10.0", "--nologo");
-        using (var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(3)))
-            await build.WaitForExitAsync(timeout.Token);
-        if (build.ExitCode != 0) throw new InvalidOperationException($"{name} build failed; see build-{name}.log.");
+        if (buildProject && Environment.GetEnvironmentVariable("EHCP_SKIP_HOST_BUILD") != "1")
+            await BuildHost(name, project);
         string functionRoot = Path.Combine(directory, "bin", "Debug", "net10.0");
         string[] expectedFunctions = project switch
         {
             "Ehcp.MockGraph" => ["SeedGraphMessage", "GetGraphMessage"],
             "Ehcp.MockExtraction" => ["SeedExtraction", "Extract"],
             "Ehcp.Processing" => ["ProcessEmail"],
+            "Ehcp.ApiFunctions" => ["GetCase", "GetEmail"],
             _ => []
         };
         if (function)
@@ -151,13 +174,12 @@ internal static class LocalTestStack
             ? Launch(name, functionRoot, "func", "start", "--dotnet-isolated", "--no-build",
                 "--script-root", functionRoot, "--port", port.ToString())
             : Launch(name, directory, "dotnet", "run", "--no-build", "--no-launch-profile", "--urls", $"http://localhost:{port}");
+        if (project == "Ehcp.Processing") processingHost = host;
         await Wait(name, async () =>
         {
             using var response = await Http.GetAsync($"http://localhost:{port}/" + (function ? "admin/host/status" : ""));
             if (!response.IsSuccessStatusCode) return false;
             using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            if (!function)
-                return json.RootElement.TryGetProperty("name", out var value) && value.GetString() == "EHCP API";
             if (!json.RootElement.TryGetProperty("state", out var state) || state.GetString() != "Running")
                 return false;
 
@@ -173,6 +195,15 @@ internal static class LocalTestStack
             }
             return true;
         }, host);
+    }
+
+    private static async Task BuildHost(string name, string project)
+    {
+        Process build = Launch("build-" + name, Path.Combine(root, "src", project), "dotnet", "build", project + ".csproj",
+            "--configuration", "Debug", "--framework", "net10.0", "--nologo");
+        using (var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(3)))
+            await build.WaitForExitAsync(timeout.Token);
+        if (build.ExitCode != 0) throw new InvalidOperationException($"{name} build failed; see build-{name}.log.");
     }
 
     private static Process Launch(string name, string directory, string executable, params string[] args)
@@ -304,6 +335,48 @@ internal static class LocalTestStack
         throw new InvalidOperationException("Cannot locate Ehcp.slnx above the test output directory. Run tests from the extracted repository.");
     }
 
+    internal static void StopProcessing()
+    {
+        lock (Gate)
+        {
+            if (processingHost is null) return;
+            if (!processingHost.HasExited)
+            {
+                processingHost.Kill(entireProcessTree: true);
+                if (!processingHost.WaitForExit(5000))
+                    throw new InvalidOperationException("The processing host did not stop before scenario cleanup.");
+            }
+            Owned.Remove(processingHost);
+            processingHost.Dispose();
+            processingHost = null;
+        }
+    }
+
+    internal static Task StartProcessingAsync() =>
+        IsRemote ? Task.CompletedTask : StartHost("Processing", "Ehcp.Processing", 7103, true, buildProject: false);
+
+    internal static async Task StopAsync()
+    {
+        try
+        {
+            if (!started) return;
+            // Guarded by started: a remote run never reaches here, so the deployed database is not deleted.
+            StopProcessing();
+            var queues = new QueueServiceClient("UseDevelopmentStorage=true");
+            await queues.GetQueueClient(queueName).DeleteIfExistsAsync();
+            await queues.GetQueueClient(queueName + "-poison").DeleteIfExistsAsync();
+            using var cosmos = new CosmosClient("https://localhost:8081", Environment.GetEnvironmentVariable("Cosmos__Key"),
+                new CosmosClientOptions { ConnectionMode = ConnectionMode.Gateway });
+            try { await cosmos.GetDatabase(DatabaseName).DeleteAsync(); }
+            catch (CosmosException error) when (error.StatusCode == HttpStatusCode.NotFound) { }
+        }
+        finally
+        {
+            started = false;
+            Stop();
+        }
+    }
+
     public static void Stop()
     {
         lock (Gate)
@@ -315,6 +388,7 @@ internal static class LocalTestStack
                 process.Dispose();
             }
             Owned.Clear();
+            processingHost = null;
             runLock?.Dispose();
             runLock = null;
         }

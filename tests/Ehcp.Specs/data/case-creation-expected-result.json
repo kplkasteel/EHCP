@@ -1,0 +1,30 @@
+{
+  "id": "{{emailId}}",
+  "conversationId": "{{conversationId}}",
+  "direction": "inbound",
+  "status": "Processed",
+  "receivedDateTime": "2026-11-01T09:00:00Z",
+  "children": [
+    {
+      "name": {{childName:json}},
+      "status": "Folded",
+      "nhsNumber": {{nhsNumber:json}},
+      "caseId": null,
+      "dateOfBirth": {{dateOfBirth:json}},
+      "matchedCaseId": "{{caseAlias}}",
+      "possibleCaseMatches": [],
+      "relationships": [
+        {
+          "type": "parent",
+          "name": "{{parentName}}",
+          "email": "{{parentEmail}}",
+          "phone": null,
+          "confidenceBand": "VeryLow",
+          "userStatus": null,
+          "sourceEmailId": null
+        }
+      ],
+      "attributes": {{expectedAttributes}}
+    }
+  ]
+}

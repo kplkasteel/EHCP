@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Text.Json.Nodes;
 using Ehcp.Core;
 using Ehcp.Infrastructure;
 using Microsoft.Azure.Cosmos;
@@ -36,16 +35,11 @@ public sealed partial class GetEmailSteps : IDisposable
     private readonly CosmosClient _client;
     private readonly HttpClient _http = new() { BaseAddress = new Uri(EhcpBaseUrl) };
     private EmailDocument? _seeded;
-    private string? _seededMailboxId;
     private HttpResponseMessage? _response;
+    private readonly Dictionary<string, string> _caseIds = new(StringComparer.Ordinal);
 
     public GetEmailSteps()
     {
-        LocalServices.RequireEndpoint(CosmosEndpoint);
-        LocalServices.RequireEndpoint(EhcpBaseUrl);
-        LocalServices.RequireEndpoint(MockGraphBaseUrl);
-        LocalServices.RequireEndpoint(MockExtractionBaseUrl);
-        LocalServices.RequireAzurite(AzureWebJobsStorage);
         _client = new CosmosClient(_settings.Endpoint, _settings.Key, new CosmosClientOptions
         {
             ConnectionMode = ConnectionMode.Gateway,
@@ -73,12 +67,13 @@ public sealed partial class GetEmailSteps : IDisposable
         _seeded = new EmailDocument(emailId, "spec-thread", Direction.inbound, DateTimeOffset.UtcNow, [child],
             Enum.Parse<EmailProcessingStatus>(status));
         await new CosmosDocumentStore<EmailDocument>(_client, _settings).CreateAsync(_mailboxId, _seeded, default);
-        _seededMailboxId = _mailboxId;
     }
 
-     [When(@"a request is made to the \/mailbox\/{string}\/cases\/{string} endpoint")]
-      public async Task WhenARequestIsMadeToTheMailboxCasesEndpoint(string mailbox, string caseId) =>
-        _response = await _http.GetAsync($"/api/mailboxes/{Uri.EscapeDataString(mailbox)}/emails/{Uri.EscapeDataString(caseId)}");
+    [When(@"a request is made to the \/mailbox\/{string}\/cases\/{string} endpoint")]
+    public async Task WhenARequestIsMadeToTheMailboxCasesEndpoint(string mailbox, string caseId) =>
+        _response = await _http.GetAsync($"/api/mailboxes/{Uri.EscapeDataString(mailbox)}/cases/{Uri.EscapeDataString(ResolveCaseId(caseId))}");
+
+    private string ResolveCaseId(string caseId) => _caseIds.GetValueOrDefault(caseId, caseId);
 
 
     [When(@"a request is made to the \/mailbox\/{string}\/emails\/{string} endpoint")]
@@ -102,15 +97,6 @@ public sealed partial class GetEmailSteps : IDisposable
     {
         Assert.NotNull(_response);
         Assert.Equal(HttpStatusCode.NotFound, _response.StatusCode);
-    }
-
-    [AfterScenario]
-    public async Task RemoveSeededRecord()
-    {
-        if (_seeded is null || _seededMailboxId is null) return;
-        Container container = _client.GetContainer(_settings.Database, _settings.Mailboxes[_seededMailboxId].EmailsContainer);
-        try { await container.DeleteItemAsync<JsonObject>(_seeded.Id, new PartitionKey(_seeded.Id)); }
-        catch (CosmosException error) when (error.StatusCode == HttpStatusCode.NotFound) { }
     }
 
     public void Dispose()

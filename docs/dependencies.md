@@ -43,12 +43,14 @@ The diagram does not specify matching/creation rules. MatchingService isolates
 this explicit initial policy:
 
 * Search only the selected mailbox's cases.
-* Find exact NHS number, exact external case reference, or exact name plus DOB.
+* Require an NHS number, external Synergy case reference, DfE ID or Mosaic ID
+  before searching. Find candidates by these identifiers or exact name plus DOB.
   Text identity comparisons trim outer whitespace and ignore case; no fuzzy matching.
-* Multiple candidates, or contradictory NHS number, case reference or DOB,
+* Multiple candidates, conflicting values for one identifier, or contradictory
+  NHS number, Synergy reference, DfE ID, Mosaic ID or DOB,
   produce Conflict with possibleCaseMatches.
 * A unique noncontradictory candidate is Folded.
-* With no candidate, name plus DOB creates a case and folds the email.
+* With no candidate, a name plus a strong identifier creates a case and folds the email.
   Otherwise the child remains PendingMatch.
 * Preserve existing facts, fill missing identifiers, and append novel relationships
   and attributes with sourceEmailId. AI output cannot grant officer-confirmed userStatus.

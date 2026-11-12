@@ -1,7 +1,7 @@
 [
   {
-    "id": "scenario-2-single-child",
-    "conversationId": "spec-thread-002",
+    "id": "{{emailId}}",
+    "conversationId": "{{conversationId}}",
     "direction": "inbound",
     "status": "Unprocessed",
     "receivedDateTime": "2026-11-01T09:00:00Z",

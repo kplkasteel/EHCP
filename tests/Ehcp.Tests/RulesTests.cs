@@ -1,5 +1,3 @@
-// using System.Security.Claims;
-using Ehcp.Api;
 using Ehcp.Core;
 using Ehcp.Infrastructure;
 using Xunit;
@@ -23,17 +21,4 @@ public sealed class RulesTests
         DocumentRules.Validate(record);
         Assert.Throws<DocumentValidationException>(() => DocumentRules.Validate(record with { EntityId = "EHC-2024-0456" }));
     }
-    [Theory] [InlineData(null)] [InlineData("*")] [InlineData("W/\"version\"")] [InlineData("\"one\",\"two\"")]
-    public void UnconditionalOrWeakEtagsAreRejected(string? etag) => Assert.False(ETagRules.IsSpecific(etag));
-//     [Fact] public void MailboxRoleDoesNotGrantAccessToAnotherMailbox()
-//     {
-//         var settings = new CosmosSettings { Mailboxes = new()
-//         {
-//             ["one"] = new() { Role = "Mailbox.One" }, ["two"] = new() { Role = "Mailbox.Two" }
-//         }};
-//         var user = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim("roles", "StandardUser"), new Claim("roles", "Mailbox.One") }, "test", "name", "roles"));
-//         Assert.True(MailboxAuthorization.CanAccess(user, "one", settings));
-//         Assert.False(MailboxAuthorization.CanAccess(user, "two", settings));
-//         Assert.False(MailboxAuthorization.CanAccess(user, "unknown", settings));
-//     }
 }

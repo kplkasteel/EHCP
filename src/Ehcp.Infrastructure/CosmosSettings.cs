@@ -7,8 +7,7 @@ public sealed class CosmosSettings
     public string Database { get; set; } = "ehcp-team-shared-1";
     public bool Initialize { get; set; }
     public Dictionary<string, MailboxSettings> Mailboxes { get; set; } = new(StringComparer.Ordinal);
-    public bool IsValid() => Uri.TryCreate(Endpoint, UriKind.Absolute, out Uri? uri)
-        && uri.IsLoopback && uri.Scheme == "https" && !string.IsNullOrWhiteSpace(Key)
+    public bool IsValid() => Uri.TryCreate(Endpoint, UriKind.Absolute, out _) && !string.IsNullOrWhiteSpace(Key)
         && !string.IsNullOrWhiteSpace(Database) && Mailboxes.Count > 0
         && Mailboxes.All(m => !string.IsNullOrWhiteSpace(m.Key)
             // FUTURE AUTH: && !string.IsNullOrWhiteSpace(m.Value.Role)

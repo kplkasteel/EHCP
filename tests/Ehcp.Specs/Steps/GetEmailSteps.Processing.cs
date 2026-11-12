@@ -3,6 +3,8 @@ using System.Text.Json.Nodes;
 using Azure.Storage.Queues;
 using Ehcp.Core;
 using Ehcp.Infrastructure;
+using Ehcp.Specs.Hooks;
+using Microsoft.Azure.Cosmos;
 using Reqnroll;
 using Xunit;
 
@@ -41,7 +43,6 @@ public sealed partial class GetEmailSteps
     private EmailExtraction? _pendingExtraction;
     private GraphEmail? _pendingGraphEmail;
     private GraphSeedMessage? _pendingGraphMessage;
-    private readonly List<(string MailboxId, string Id)> _seededDatasetDocuments = [];
     private string? _processingMailboxId;
     private string? _processingEmailId;
 
@@ -54,7 +55,6 @@ public sealed partial class GetEmailSteps
         {
             await store.CreateAsync(_mailboxId, document, default);
             _seededEmails[document.Id] = document;
-            _seededDatasetDocuments.Add((_mailboxId, document.Id));
         }
     }
 
@@ -110,10 +110,9 @@ public sealed partial class GetEmailSteps
         string payload = JsonSerializer.Serialize(
             new ProcessEmailMessage(message.MailboxId, message.EmailId, message.GraphMessageId),
             CosmosDocumentStore<EmailDocument>.JsonOptions);
-        await queue.SendMessageAsync(payload);
-
         _processingMailboxId = message.MailboxId;
         _processingEmailId = message.EmailId;
+        await queue.SendMessageAsync(payload);
     }
 
     [When("we wait for the database processing status to be {string}")]
@@ -155,27 +154,31 @@ public sealed partial class GetEmailSteps
             await _response.Content.ReadAsStringAsync());
 
         JsonNode? expected = JsonNode.Parse(
-            await File.ReadAllTextAsync(DatasetPath(dataset)));
+            await RenderDatasetAsync(dataset));
 
         Assert.NotNull(actual);
         Assert.NotNull(expected);
-        Assert.NotNull(actual["receivedDateTime"]);
-        Assert.NotNull(expected["receivedDateTime"]);
+        AssertSameReceivedDateTime(expected, actual);
 
-        var culture = System.Globalization.CultureInfo.InvariantCulture;
+        JsonArray expectedChildren = expected["children"]!.AsArray();
+        JsonArray actualChildren = actual["children"]!.AsArray();
+        Assert.Equal(expectedChildren.Count, actualChildren.Count);
+        for (int i = 0; i < expectedChildren.Count; i++)
+        {
+            JsonNode? expectedId = expectedChildren[i]?["matchedCaseId"];
+            if (expectedId is null) continue;
 
-        DateTimeOffset actualDate = DateTimeOffset.Parse(
-            actual["receivedDateTime"]!.GetValue<string>(), culture);
+            string alias = expectedId.GetValue<string>();
+            string? actualId = actualChildren[i]?["matchedCaseId"]?.GetValue<string>();
+            Assert.False(string.IsNullOrWhiteSpace(actualId), $"Expected a case ID for '{alias}'.");
+            if (_caseIds.TryGetValue(alias, out string? previousId))
+                Assert.Equal(previousId, actualId);
+            else
+                _caseIds.Add(alias, actualId!);
+            expectedChildren[i]!["matchedCaseId"] = actualId;
+        }
 
-        DateTimeOffset expectedDate = DateTimeOffset.Parse(
-            expected["receivedDateTime"]!.GetValue<string>(), culture);
-
-        Assert.Equal(expectedDate, actualDate);
-
-        // Dates match; use the same representation for the JSON comparison.
-        actual["receivedDateTime"] =
-            expected["receivedDateTime"]!.GetValue<string>();
-
+        ProjectAttributes(expected, actual);
         var options = new JsonSerializerOptions { WriteIndented = true };
 
         Assert.True(JsonNode.DeepEquals(expected, actual),
@@ -191,36 +194,97 @@ public sealed partial class GetEmailSteps
         Assert.Equal(System.Net.HttpStatusCode.OK, _response.StatusCode);
         string actualJson = await _response.Content.ReadAsStringAsync();
         JsonNode? actual = JsonNode.Parse(actualJson);
-        JsonNode? expected = JsonNode.Parse(await File.ReadAllTextAsync(DatasetPath(dataset)));
+        JsonNode? expected = JsonNode.Parse(await RenderDatasetAsync(dataset));
+        Assert.NotNull(actual);
+        Assert.NotNull(expected);
+        ProjectAttributes(expected, actual);
+        if (expected["id"] is JsonNode expectedId)
+            expected["id"] = ResolveCaseId(expectedId.GetValue<string>());
+        if (expected["entityId"] is JsonNode expectedEntityId)
+            expected["entityId"] = ResolveCaseId(expectedEntityId.GetValue<string>());
+
+        JsonArray? expectedCommunications = expected["communications"]?.AsArray();
+        JsonArray? actualCommunications = actual["communications"]?.AsArray();
+        Assert.NotNull(expectedCommunications);
+        Assert.NotNull(actualCommunications);
+        Assert.Equal(expectedCommunications.Count, actualCommunications.Count);
+        for (int i = 0; i < expectedCommunications.Count; i++)
+        {
+            Assert.NotNull(expectedCommunications[i]);
+            Assert.NotNull(actualCommunications[i]);
+            AssertSameReceivedDateTime(expectedCommunications[i]!, actualCommunications[i]!);
+        }
         Assert.True(JsonNode.DeepEquals(expected, actual),
             $"Response did not match '{dataset}'.\nExpected:\n{expected?.ToJsonString(new JsonSerializerOptions { WriteIndented = true })}\n" +
             $"Actual:\n{actual?.ToJsonString(new JsonSerializerOptions { WriteIndented = true })}");
     }
 
-    [AfterScenario]
-    public async Task RemoveSeededDatasetDocuments()
+    private static void AssertSameReceivedDateTime(JsonNode expected, JsonNode actual)
     {
-        var store = new CosmosDocumentStore<EmailDocument>(_client, _settings);
-        foreach ((string seededMailbox, string id) in _seededDatasetDocuments)
+        Assert.NotNull(expected["receivedDateTime"]);
+        Assert.NotNull(actual["receivedDateTime"]);
+        string expectedValue = expected["receivedDateTime"]!.GetValue<string>();
+        string actualValue = actual["receivedDateTime"]!.GetValue<string>();
+        var culture = System.Globalization.CultureInfo.InvariantCulture;
+        Assert.Equal(DateTimeOffset.Parse(expectedValue, culture), DateTimeOffset.Parse(actualValue, culture));
+        actual["receivedDateTime"] = expectedValue;
+    }
+
+    [AfterScenario]
+    public async Task RemoveScenarioDocuments()
+    {
+        if (_settings.Database != LocalTestStack.DatabaseName || string.IsNullOrEmpty(LocalTestStack.DatabaseName))
+            throw new InvalidOperationException("Refusing to clean up a database not owned by this test run.");
+
+        bool processingWasStarted = _processingEmailId is not null;
+        if (processingWasStarted) LocalTestStack.StopProcessing();
+
+        if (processingWasStarted)
         {
-            try
-            {
-                StoredDocument<EmailDocument> current = await store.ReadAsync(seededMailbox, id, default);
-                await store.DeleteAsync(seededMailbox, id, current.ETag, default);
-            }
-            catch (DocumentStoreException error) when (error.Failure == StoreFailure.NotFound) { }
+            await ClearQueueAsync(ProcessingQueueName);
+            await ClearQueueAsync(ProcessingQueueName + "-poison");
         }
-        // Note: if matching created a CaseDocument (MatchingService.cs derives its id from a hash of
-        // mailboxId + identity), it is not cleaned up here - reproducing that derivation would duplicate
-        // production logic in the test project.
+
+        foreach (MailboxSettings mailbox in _settings.Mailboxes.Values)
+        {
+            await RemoveDocumentsAsync(mailbox.EmailsContainer, "id");
+            await RemoveDocumentsAsync(mailbox.CasesContainer, "entityId");
+        }
+
+        if (processingWasStarted) await LocalTestStack.StartProcessingAsync();
+    }
+
+    private static async Task ClearQueueAsync(string name)
+    {
+        var queue = new QueueClient(AzureWebJobsStorage, name);
+        if (await queue.ExistsAsync()) await queue.ClearMessagesAsync();
+    }
+
+    private async Task RemoveDocumentsAsync(string containerName, string partitionKeyProperty)
+    {
+        Container container = _client.GetContainer(_settings.Database, containerName);
+        using FeedIterator<JsonObject> iterator = container.GetItemQueryIterator<JsonObject>(
+            "SELECT c.id, c.entityId FROM c");
+        var documents = new List<(string Id, string PartitionKey)>();
+        while (iterator.HasMoreResults)
+        {
+            foreach (JsonObject document in await iterator.ReadNextAsync())
+                documents.Add((document["id"]!.GetValue<string>(), document[partitionKeyProperty]!.GetValue<string>()));
+        }
+
+        foreach ((string id, string partitionKey) in documents)
+        {
+            try { await container.DeleteItemAsync<JsonObject>(id, new PartitionKey(partitionKey)); }
+            catch (CosmosException error) when (error.StatusCode == System.Net.HttpStatusCode.NotFound) { }
+        }
     }
 
     private static string DatasetPath(string dataset) => Path.Combine(AppContext.BaseDirectory, DataFolder, dataset);
 
-    private static async Task<T> ReadDatasetAsync<T>(string dataset)
+    private async Task<T> ReadDatasetAsync<T>(string dataset)
     {
-        await using FileStream stream = File.OpenRead(DatasetPath(dataset));
-        return await JsonSerializer.DeserializeAsync<T>(stream, CosmosDocumentStore<EmailDocument>.JsonOptions)
+        string text = await RenderDatasetAsync(dataset);
+        return JsonSerializer.Deserialize<T>(text, CosmosDocumentStore<EmailDocument>.JsonOptions)
             ?? throw new InvalidOperationException($"Dataset '{dataset}' is empty.");
     }
 

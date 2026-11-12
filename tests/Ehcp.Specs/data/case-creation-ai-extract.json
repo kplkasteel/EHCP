@@ -1,0 +1,20 @@
+{
+  "relevance": true,
+  "reliability": true,
+  "extractedChildren": [
+    {
+      "name": {{childName:json}},
+      "nhsNumber": {{nhsNumber:json}},
+      "dateOfBirth": {{dateOfBirth:json}},
+      "relationships": [
+        {
+          "type": "parent",
+          "name": "{{parentName}}",
+          "email": "{{parentEmail}}",
+          "phone": null
+        }
+      ],
+      "attributes": {{attributes}}
+    }
+  ]
+}

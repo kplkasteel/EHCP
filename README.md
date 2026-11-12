@@ -1,154 +1,90 @@
-# EHCP API — .NET 10
+# EHCP — .NET 10
 
-ASP.NET Core Web API with eight CRUD operations, generated OpenAPI 3.0, Cosmos DB for NoSQL, environment configuration, authentication/authorization code retained as comments for future development. This is a source solution to build and verify locally, not a deployed service.
+Azure Functions (isolated worker) solution for EHCP email processing and case lookup, backed by Queue Storage and Cosmos DB for NoSQL. Four function apps: `Ehcp.Processing` (queue trigger), `Ehcp.ApiFunctions` (read-only HTTP API), and `Ehcp.MockGraph` and `Ehcp.MockExtraction` (test doubles). Deployed to Azure with Bicep and `rake deploy`.
 
 ## Quick start (PowerShell, Windows Cosmos emulator)
 
-1. Install the .NET 10 SDK and Azure Cosmos DB emulator for NoSQL. Start the emulator and trust its local TLS certificate. This application uses HTTPS Gateway mode for Cosmos; it does not bypass certificate validation. The emulator must support item TTL.
-2. Open `Ehcp.slnx` in an IDE supporting .NET 10, or use the commands below from this directory. Use the emulator key from its local Data Explorer; no key is committed.
+1. Install the .NET 10 SDK, Azure Functions Core Tools v4, and the Azure Cosmos DB emulator for NoSQL. Start the emulator and trust its local TLS certificate.
+2. Use the emulator key from its local Data Explorer; no key is committed.
+
+With Ruby and Rake installed, `rake up` sets the local variables, builds, and starts the API (`5100`), the Processing host and the mock Graph (`7101`) and mock extraction (`7102`) hosts in the foreground; Ctrl+C stops them. In another terminal, `rake specs` runs the Reqnroll specs in `tests/Ehcp.Specs` against them. `rake go` runs unit tests, starts the services, runs the specs and stops the services. `rake -T` lists the individual steps.
+
+To run the API alone:
 
 ```powershell
-$env:Cosmos__Endpoint = 'https://localhost:8081'
-$env:Cosmos__Key = '<your-local-emulator-key>'
-$env:Cosmos__Database = 'ehcp-team-shared-1'
-$env:Cosmos__Initialize = 'true'
-$env:ASPNETCORE_ENVIRONMENT = 'Development'
-
-dotnet restore Ehcp.slnx
-dotnet build Ehcp.slnx
-dotnet test tests/Ehcp.Tests
-
-dotnet run --project src/Ehcp.Api
+Set-Location src/Ehcp.ApiFunctions
+func start --dotnet-isolated --port 5100
 ```
 
-With Ruby and Rake installed, `rake up` sets the variables above (emulator key defaults to the public emulator key; override with `Cosmos__Key`), builds, and starts the API (`5100`), the Processing host and the mock Graph (`7101`) and mock extraction (`7102`) function hosts in the foreground; Ctrl+C stops them. In another terminal, `rake specs` runs the Reqnroll specs in `tests/Ehcp.Specs` against them. `rake go` runs unit tests, starts the services, runs the specs and stops the services. `rake -T` lists the individual steps.
+Copy `local.settings.example.json` to `local.settings.json` in the same folder and fill in `Cosmos__Key`. `local.settings.json` is git-ignored.
 
-All endpoints currently accept requests without a token. No authentication services, middleware or Entra metadata discovery are configured. API base URL: `http://localhost:5100`; OpenAPI JSON: `http://localhost:5100/openapi/v1.json`. Import this URL into Postman or an OpenAPI client. An interactive Swagger UI is not included. The API's HTTP listener is for loopback development; production must terminate TLS at its configured gateway/host.
+## Azure sandbox
 
-```powershell
-$headers = @{}
-$base = 'http://localhost:5100/api/mailboxes/ehcp-team-shared'
-$email = @{
-    id = 'example-email-1'
-    conversationId = 'example-thread-1'
-    direction = 'inbound'
-    receivedDateTime = '2026-10-28T10:00:00Z'
-    children = @()
-} | ConvertTo-Json -Depth 10
+- `rake deploy` deploys the Bicep in `infra/main.bicep` into the existing resource group (`EHCP_RESOURCE_GROUP`, default `jamie-lupton-sandbox-rg`), then packs and zip-deploys the four apps. Zips are kept in `artifacts/deploy/`.
+- `rake publish_apps[api]` republishes one app without touching infrastructure. Omit the argument to publish all four.
+- `rake test_remote` runs the specs against Azure. `rake test_remote_wip` runs only `@wip` scenarios. Remote runs delete all documents in the sandbox email and case containers, one scenario at a time.
 
-Invoke-RestMethod "$base/emails" -Method Post -Headers $headers -ContentType 'application/json' -Body $email
-$response = Invoke-WebRequest "$base/emails/example-email-1" -Headers $headers
-$headers['If-Match'] = [string]$response.Headers.ETag
-Invoke-RestMethod "$base/emails/example-email-1" -Method Put -Headers $headers -ContentType 'application/json' -Body $email
-# PUT produces a new ETag: read it before DELETE.
-$response = Invoke-WebRequest "$base/emails/example-email-1" -Headers $headers
-$headers['If-Match'] = [string]$response.Headers.ETag
-Invoke-RestMethod "$base/emails/example-email-1" -Method Delete -Headers $headers
-```
+## API endpoints
 
-## Endpoint contract
+Read-only. No authentication is configured.
 
-All routes start with `/api/mailboxes/{mailboxId}`.
-
-| Method | Suffix | Successful result |
+| Method | Route | Result |
 | --- | --- | --- |
-| POST | `/emails` | 201, email, Location and ETag |
-| GET | `/emails/{emailId}` | 200, email and ETag |
-| PUT | `/emails/{emailId}` | 200, full replacement and new ETag |
-| DELETE | `/emails/{emailId}` | 204 |
-| POST | `/cases` | 201, case, Location and ETag |
-| GET | `/cases/{entityId}` | 200, case and ETag |
-| PUT | `/cases/{entityId}` | 200, full replacement and new ETag |
-| DELETE | `/cases/{entityId}` | 204 |
+| GET | `/api/mailboxes/{mailboxId}/emails/{emailId}` | 200, email and ETag |
+| GET | `/api/mailboxes/{mailboxId}/cases/{entityId}` | 200, case and ETag |
 
-GET provides the quoted ETag; send it unchanged as `If-Match` for PUT/DELETE. Missing, wildcard, multiple and weak ETags are rejected with 428. A stale ETag returns 412. Create never upserts (duplicates return 409); PUT never creates a missing document (404). DELETE hard-deletes the selected document without cascading. There are no collection/list endpoints or PATCH operations in this version.
+Case communications are returned newest-first. Enums are strings.
 
-Errors use `{ "code": "...", "message": "..." }`: 400 validation, 404 missing, 409 duplicate, 412 stale version, 428 missing version, 503 storage unavailable, 500 unexpected failure. Invalid JSON and model-binding failures return 400. Infrastructure exception details are not returned or logged.
-
-JSON enums are strings (integer enums rejected). Write contracts require every non-optional constructor field, including explicit `null` for nullable fields and `[]` for empty arrays. Example case: `docs/example-case.json`. PUT is a complete replacement, not an officer field-edit workflow. Case communications are returned newest-first.
+Errors use `{ "code": "...", "message": "..." }`: 400 invalid identifier, 404 not found, 503 storage unavailable, 500 unexpected failure. Infrastructure exception details are not returned or logged.
 
 ## Configuration
 
-ASP.NET Core configuration loads JSON, development user secrets, environment variables, then command-line overrides. Use `__` for nested environment settings. No `.env` loader is installed: a `.env` file alone will not set process variables.
+Function apps read `appsettings.json`, then environment variables (`__` separates nested keys).
 
 | Variable | Purpose |
 | --- | --- |
 | `Cosmos__Endpoint` | Cosmos NoSQL HTTPS endpoint |
-| `Cosmos__Key` | Account/emulator key; required, never committed |
+| `Cosmos__Key` | Account or emulator key; required, never committed |
 | `Cosmos__Database` | Database name |
-| `Cosmos__Initialize` | Create/validate database and containers; only allowed in Development |
-| `Cosmos__Mailboxes__ehcp-team-shared__Role` | Future mailbox app-role value; currently unused |
-| `Cosmos__Mailboxes__ehcp-team-shared__EmailsContainer` | Email container name |
-| `Cosmos__Mailboxes__ehcp-team-shared__CasesContainer` | Case container name |
-| `AllowedHosts` | Allowed API hostnames; default is localhost |
+| `Cosmos__Initialize` | Create and validate containers; only allowed in Development |
+| `Cosmos__Mailboxes__ehcp-team-shared-1__EmailsContainer` | Email container name (local settings only; set in `appsettings.json` on Azure) |
+| `Cosmos__Mailboxes__ehcp-team-shared-1__CasesContainer` | Case container name (as above) |
+| `AzureWebJobsStorage` | Queue Storage connection string |
+| `ProcessingQueueName` | Processing queue name |
 
-Additional mailboxes are configured the same way with different dictionary keys. Each mailbox must have two distinct containers, and no containers may be shared between mailboxes. The supplied mailbox is a local example; replace/remove it in `appsettings.json` when configuring production. JSON dictionary entries are merged, so adding environment entries does not remove the sample entry.
+Each mailbox must have two distinct containers, and no containers may be shared between mailboxes. Mailbox keys containing hyphens cannot be set as App Service app settings, so their container names are read from `appsettings.json`.
 
-## Authentication status and future re-enablement
-
-Authentication and authorization are commented out, including the JWT package reference, startup validation and registration, middleware, controller attributes, mailbox authorization helper, and OpenAPI bearer declarations. No Entra settings, credentials or tokens are needed. Existing mailbox Role values are retained as unused future configuration. Unknown mailboxes return 404; known mailboxes are accessible without a role check. Container selection still uses configured names only.
-
-The local launch profile binds to `http://localhost:5100`; Cosmos defaults to `https://localhost:8081`. The running API needs only the local Cosmos emulator. Package restore requires NuGet access unless packages are already cached. Cosmos emulator credentials remain necessary and are separate from API authentication.
-
-To enable authentication in future:
-
-1. Uncomment the marked JWT package reference and auth `using` directives.
-2. Uncomment the `FUTURE AUTH` startup block in `Program.cs`, plus `UseAuthentication` and `UseAuthorization`.
-3. Uncomment `MailboxAuthorization.cs`, controller authorization attributes and 401/403 metadata, the mailbox role configuration validation, and OpenAPI security declarations.
-4. Set `Authentication__Mode=Entra`, `Entra__TenantId` and `Entra__Audience`. Provision `StandardUser`, configured mailbox roles and `DataWriter` for writes. The preserved alternative `LocalJwt` mode is Development-only.
-5. Restore/adapt the commented auth test methods and token-enabled factory in `FutureAuthentication.cs` and the mailbox authorization unit test. Replace current anonymous-access expectations and update the OpenAPI tests to expect bearer security.
-
-The commented code is retained for review; it is not an active security layer. The gateway, Entra registration and Application Insights are not provisioned.
-
-## Cosmos model and isolation
+## Cosmos model
 
 | Container | Partition key | TTL |
 | --- | --- | --- |
 | Mailbox emails | `/id` | 2,592,000 seconds (30 days); item `ttl=-1` when any child is Folded |
 | Mailbox cases | `/entityId` | Disabled |
 
-`id == entityId` for cases. `caseId` remains the external Synergy reference. `matchedCaseId` and candidate `entityId` refer to the internal case key. Email IDs must be Cosmos-safe: the API rejects `/`, `\`, `?`, `#`, control characters, blanks and overly long IDs. If Graph supplies incompatible IDs, agree an ingestion-wide reversible encoding before integrating; this solution does not silently rewrite the identifier contract.
+`id == entityId` for cases. `caseId` is the external Synergy reference. `matchedCaseId` and candidate `entityId` refer to the internal case key. Email IDs must be Cosmos-safe: no `/`, `\`, `?`, `#`, control characters, blanks, or IDs over 512 characters. Cosmos TTL is relative to the last modification, so replacing a pending email restarts its TTL. TTL deletion is asynchronous.
 
-The adapter uses point reads and a singleton Cosmos client. It stores the prototype JSON at the top level, with server-calculated email `ttl`; Cosmos metadata is excluded from API responses. Initializer checks existing partition paths/TTL and fails on mismatches instead of rewriting them. Cosmos TTL is relative to the last modification (`_ts`), so replacing a pending email restarts its TTL; this is not a fixed received-date expiry policy. TTL deletion is asynchronous.
+## Queue-triggered email processing
 
-## Boundaries and integration decisions
+The processing host implements the queue → Graph → extraction → matching → Cosmos flow. Graph and extraction can use real HTTP adapters or configured JSON fixtures in Development, while matching and Cosmos stay real. Email-level status tracks Unprocessed, Processing, Processed or Failed independently of child outcomes.
 
-- The supplied material is an OpenAPI/read-model prototype, not executable ingestion or processing code. Its read endpoints and identifiers are retained; CRUD is added per the request. It labels itself 3.1 but uses 3.0-style `nullable`; generated output explicitly targets 3.0.
-- This is an ASP.NET Core service, not an Azure Functions project. The prototype's product title alone was not treated as a hosting requirement.
-- Core contains framework-independent models/rules and a storage port. Infrastructure implements Cosmos persistence. API handles HTTP, authorization, composition and validation. No extra service layer, mediator or interface-per-class is introduced without business behaviour to justify it.
-- The API remains trusted document CRUD. The separate Ehcp.Processing queue Function now retrieves Graph email, extracts child details, matches cases and folds communications. Cross-container writes are retryable but not atomic. See docs/dependencies.md for the initial matching policy and docs/processing/README.md for configuration and sample data.
-- `sourceEmailId` is preserved on reads and accepted as supplied on full replacement. This CRUD surface does **not** enforce the prototype's officer-edit provenance rule. A dedicated edit command needs stable relationship/attribute IDs and provenance rules before it is exposed to officer UI clients. When authentication is enabled, restrict `DataWriter` to trusted integrations until that workflow is implemented.
-- Archive state is not defined in the supplied schema. DELETE is hard-delete; archive filtering/workflows are not implemented. No automatic cascade is performed.
-- Confirm actual mailbox roles, container names, Graph ID format, TTL semantics and the separate design v1.4 document before production integration. That document was mentioned in the paste but was not attached.
+See [local setup and adapter contracts](docs/processing/README.md) and [architecture, matching and retry behavior](docs/dependencies.md).
 
 ## Verification
 
 ```powershell
-dotnet test tests/Ehcp.Tests
+rake unit
 $env:EHCP_TEST_COSMOS_KEY = '<your-local-emulator-key>'
 $env:EHCP_TEST_COSMOS_ENDPOINT = 'https://localhost:8081'
 dotnet test tests/Ehcp.IntegrationTests
 ```
 
-Unit/API tests cover identifier and child-state validation, TTL selection, anonymous HTTP access, token-free CRUD/concurrency and OpenAPI operation count/version with no bearer requirement. Emulator tests create a uniquely named temporary database, check round-trip serialization, duplicate handling, partition isolation, item TTL and stale ETags, then delete only that database. They explicitly report skipped if the emulator key is absent. Use a dedicated local emulator: tests provision and delete their temporary database.
+Unit tests cover identifier and child-state validation, TTL selection, and ETag validation. Emulator tests create a uniquely named temporary database, check round-trip serialization, partition isolation, item TTL and stale ETags, then delete only that database. They report skipped if the emulator key is absent. The Reqnroll specs cover the read endpoints and the processing flow.
 
-**Delivery verification:** JSON/XML and archive structure checked; C# source reviewed. The authoring workspace had no .NET SDK or emulator, so restore, compilation, test execution and live OpenAPI generation have not been verified. The included GitHub Actions workflow runs build and unit/API tests when placed at the repository root. Run the emulator tests locally before merging/integration. Package references are pinned; review dependency updates and generate a lockfile after the first successful restore.
+The included GitHub Actions workflow runs build and unit tests on push and pull request.
 
-## Reference documentation
+## Boundaries
 
-- [ASP.NET Core OpenAPI generation and version selection](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/openapi/aspnetcore-openapi?view=aspnetcore-10.0)
-- [JWT bearer validation](https://learn.microsoft.com/en-us/aspnet/core/security/authentication/configure-jwt-bearer-authentication?view=aspnetcore-10.0)
-- [Cosmos .NET SDK practices and JSON dependencies](https://learn.microsoft.com/en-us/azure/cosmos-db/best-practice-dotnet)
-
-
-## Queue-triggered email processing
-
-The processing host implements the queue → Graph → extraction → matching → Cosmos flow.
-Graph and extraction can independently use real HTTP adapters or configured JSON
-fixtures in Development, while matching and Cosmos stay real. Email-level status
-tracks Unprocessed, Processing, Processed or Failed independently of child outcomes.
-
-Build the solution, then start Azure Functions Core Tools from src/Ehcp.Processing.
-See [local setup and adapter contracts](docs/processing/README.md) and
-[architecture, matching and retry behavior](docs/dependencies.md).
-Automated tests for this new flow are intentionally left for the team to author.
+- `Ehcp.ApiFunctions` exposes read-only endpoints only. Write operations were removed with the ASP.NET Core API and are not provided by any hosted service.
+- Core holds framework-independent models, rules and the storage port. Infrastructure implements Cosmos persistence and configuration.
+- Cross-container writes are retryable but not atomic. See `docs/dependencies.md`.
+- Confirm actual mailbox names, container names, Graph ID format and TTL semantics before production integration.

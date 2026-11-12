@@ -1,24 +1,24 @@
 {
     "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('ehcp-team-shared-2%40example.com')/messages/$entity",
     "@odata.etag": "W/\"CQAAABYAAAAxKqppwSbrQYVYcUrCQA4tAABbkz5A\"",
-    "id": "AAMkAGE1-spec-scenario-2-single-child",
+    "id": "{{graphMessageId}}",
     "hasAttachments": false,
-    "subject": "Request for support for Alex Example",
-    "conversationId": "spec-thread-002",
+    "subject": "{{subject}}",
+    "conversationId": "{{conversationId}}",
     "body": {
         "contentType": "text",
-        "content": "Hello,\n\nI am writing to ask for an assessment for my son, Alex Example, who was born on 14 March 2016 and his NHS Number is 987 654 3210. He has difficulty with speech and language.\n\nKind regards,\nSam Example"
+        "content": "Hello,\n\nI am writing to ask for support for {{childLabel}}.\n{{identifierLines}}\n\nKind regards,\n{{parentName}}"
     },
     "sender": {
         "emailAddress": {
-            "name": "Sam Example",
-            "address": "sam.example@example.com"
+            "name": "{{parentName}}",
+            "address": "{{parentEmail}}"
         }
     },
     "from": {
         "emailAddress": {
-            "name": "Sam Example",
-            "address": "sam.example@example.com"
+            "name": "{{parentName}}",
+            "address": "{{parentEmail}}"
         }
     },
     "toRecipients": [
