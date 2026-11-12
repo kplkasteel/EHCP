@@ -1,0 +1,31 @@
+{
+  "id": "scenario-5-fuzzy-name-possible-matches",
+  "conversationId": "spec-thread-005",
+  "direction": "inbound",
+  "status": "Processed",
+  "receivedDateTime": "2026-11-01T09:00:00Z",
+  "children": [
+    {
+      "name": "Freddy",
+      "status": "PendingMatch",
+      "nhsNumber": null,
+      "caseId": null,
+      "dateOfBirth": "2020-03-01",
+      "matchedCaseId": null,
+      "possibleCaseMatches": [
+        {
+          "entityId": "spec-case-fred-bloggs",
+          "confidenceBand": "Medium",
+          "score": 10.0
+        },
+        {
+          "entityId": "spec-case-jones-smith",
+          "confidenceBand": "Low",
+          "score": 7.0
+        }
+      ],
+      "relationships": [],
+      "attributes": []
+    }
+  ]
+}

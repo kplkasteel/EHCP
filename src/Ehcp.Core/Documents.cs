@@ -47,7 +47,7 @@ public sealed record CaseAttribute(
     UserStatus? UserStatus = null,
     string? SourceEmailId = null);
 
-public sealed record PossibleCaseMatch(string EntityId, ConfidenceBand ConfidenceBand);
+public sealed record PossibleCaseMatch(string EntityId, ConfidenceBand ConfidenceBand, double? Score = null);
 
 public sealed record ChildResult(
     string? Name,

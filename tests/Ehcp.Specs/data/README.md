@@ -8,6 +8,7 @@ Naming: `scenario-<n>-<slug>-<role>.json`. Roles: `data`, `queue`, `graph-email`
 | 2 | GetEmail (Scenario Outline) | Single child with enough information is folded into a new case. Runs once per Examples row. | `case-creation-*` (tokenised) |
 | 3 | GetEmail | No child extracted, discarded status with rationale recorded. | `scenario-3-no-child-*` |
 | 4 | GetEmail | Irrelevant out-of-office email is discarded with its rationale. | `scenario-4-out-of-office-*` |
+| 5 | GetEmail | `@wip`. Child with no strong ID but a name and DOB match lists scored possible case matches. Seeds cases from `scenario-5-fuzzy-name-possible-matches-cases.json`. Scores (10 - DOB + Fuzzy name, 7 - DOB only). | `scenario-5-fuzzy-name-possible-matches-*` |
 
 Scenarios without fixtures use inline values in the feature file.
 

@@ -58,6 +58,15 @@ public sealed partial class GetEmailSteps
         }
     }
 
+    [Given("the database contains cases {string}")]
+    public async Task GivenTheDatabaseContainsCases(string dataset)
+    {
+        CaseDocument[] documents = await ReadDatasetAsync<CaseDocument[]>(dataset);
+        var store = new CosmosDocumentStore<CaseDocument>(_client, _settings);
+        foreach (CaseDocument document in documents)
+            await store.CreateAsync(_mailboxId, document, default);
+    }
+
     [Given("we setup mock ai extraction to return dataset {string}")]
     public async Task GivenWeSetupMockAiExtractionToReturnDataset(string dataset)
     {

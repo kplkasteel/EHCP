@@ -1,0 +1,33 @@
+{
+    "id": "AAMkAGE1-spec-scenario-5-fuzzy-name-possible-matches",
+    "hasAttachments": false,
+    "subject": "Request for support for Freddy",
+    "conversationId": "spec-thread-005",
+    "body": {
+        "contentType": "text",
+        "content": "Hello,\n\nI am writing to ask for an assessment for my son, Freddy, who was born on 1 March 2020. He has difficulty with speech and language.\n\nKind regards,\nSam Example"
+    },
+    "sender": {
+        "emailAddress": {
+            "name": "Sam Example",
+            "address": "sam.example@example.com"
+        }
+    },
+    "from": {
+        "emailAddress": {
+            "name": "Sam Example",
+            "address": "sam.example@example.com"
+        }
+    },
+    "toRecipients": [
+        {
+            "emailAddress": {
+                "name": "Ehcp team",
+                "address": "ehcp-team@example.com"
+            }
+        }
+    ],
+    "ccRecipients": [],
+    "bccRecipients": [],
+    "replyTo": []
+}

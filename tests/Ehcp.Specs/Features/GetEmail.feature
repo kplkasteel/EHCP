@@ -1,6 +1,5 @@
 Feature: Retrieve email
 
-@wip
 Scenario Outline: Retrieve an existing email by id
 	Given the mailbox "ehcp-team-shared-1" is selected
 	And the database is setup to contain an email with id "<emailId>" and processing status "<status>"
@@ -36,6 +35,18 @@ Scenario: Email with child information extracted but not enough to create a case
 	And we wait for the database processing status to be "Processed"
 	When a request is made to the /mailbox/"ehcp-team-shared-1"/emails/"scenario-1-single-child" endpoint
 	Then the email record should be retrieved matching "scenario-1-single-child-expected-result.json"
+
+@wip
+Scenario: Email with a fuzzy-matching child lists scored possible case matches
+	Given the mailbox "ehcp-team-shared-1" is selected
+	And the database is setup to contain "scenario-5-fuzzy-name-possible-matches-data.json"
+	And the database contains cases "scenario-5-fuzzy-name-possible-matches-cases.json"
+	And we setup mock ai extraction to return dataset "scenario-5-fuzzy-name-possible-matches-ai-extract.json"
+	And we setup mock graph api to return dataset "scenario-5-fuzzy-name-possible-matches-graph-email.json"
+	When the email record "scenario-5-fuzzy-name-possible-matches-queue.json" is added to the queue
+	And we wait for the database processing status to be "Processed"
+	When a request is made to the /mailbox/"ehcp-team-shared-1"/emails/"scenario-5-fuzzy-name-possible-matches" endpoint
+	Then the email record should be retrieved matching "scenario-5-fuzzy-name-possible-matches-expected-result.json"
 
 Scenario Outline: Email with child information extracted and enough information should create a case
 	Given the mailbox "ehcp-team-shared-1" is selected
