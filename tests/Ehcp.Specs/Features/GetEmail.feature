@@ -61,7 +61,7 @@ Scenario Outline: Email with a fuzzy-matching child lists scored possible case m
 	And we wait for the database processing status to be "Processed"
 	When a request is made to the /mailbox/"ehcp-team-shared-1"/emails/"<emailId>" endpoint
 	Then the email record should be retrieved matching "scenario-5-fuzzy-name-possible-matches-expected-result.json"
-
+//These examples need to inject the expected matches expected result json. Then also test a few permutations i.e. DOB + Fuzzy Name = Expected Score (Done), Full Name only = Expected Score, DOB only = Expected Score, 
 	Examples:
 		| emailId                                | conversationId  | parentName  | parentEmail             | childName | nhsNumber | dateOfBirth | mosaicId | dfeId | synergyId |
 		| scenario-5-fuzzy-name-possible-matches | spec-thread-005 | Sam Example | sam.example@example.com | Freddy    |           | 2020-03-01  |          |       |           |

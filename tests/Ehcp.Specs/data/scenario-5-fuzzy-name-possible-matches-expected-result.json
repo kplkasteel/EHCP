@@ -13,6 +13,7 @@
       "dateOfBirth": {{dateOfBirth:json}},
       "matchedCaseId": null,
       "possibleCaseMatches": [
+        // This array needs to be tokenised so that we can say what should be expected in the test scenario examples
         {
           "entityId": "spec-case-fred-bloggs",
           "confidenceBand": "Medium",
