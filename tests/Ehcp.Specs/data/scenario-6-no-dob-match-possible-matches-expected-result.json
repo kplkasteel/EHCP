@@ -1,0 +1,20 @@
+{
+  "id": "{{emailId}}",
+  "conversationId": "{{conversationId}}",
+  "direction": "inbound",
+  "status": "Processed",
+  "receivedDateTime": "2026-11-01T09:00:00Z",
+  "children": [
+    {
+      "name": {{childName:json}},
+      "status": "PendingMatch",
+      "nhsNumber": {{nhsNumber:json}},
+      "caseId": null,
+      "dateOfBirth": {{dateOfBirth:json}},
+      "matchedCaseId": null,
+      "possibleCaseMatches": [],
+      "relationships": [],
+      "attributes": []
+    }
+  ]
+}

@@ -1,22 +1,22 @@
 {
-    "id": "AAMkAGE1-spec-scenario-5-fuzzy-name-possible-matches",
+    "id": "{{graphMessageId}}",
     "hasAttachments": false,
-    "subject": "Request for support for Freddy",
-    "conversationId": "spec-thread-005",
+    "subject": "{{subject}}",
+    "conversationId": "{{conversationId}}",
     "body": {
         "contentType": "text",
-        "content": "Hello,\n\nI am writing to ask for an assessment for my son, Freddy, who was born on 1 March 2020. He has difficulty with speech and language.\n\nKind regards,\nSam Example"
+        "content": "Hello,\n\nI am writing to ask for support for {{childLabel}}.\n{{identifierLines}}\n\nKind regards,\n{{parentName}}"
     },
     "sender": {
         "emailAddress": {
-            "name": "Sam Example",
-            "address": "sam.example@example.com"
+            "name": "{{parentName}}",
+            "address": "{{parentEmail}}"
         }
     },
     "from": {
         "emailAddress": {
-            "name": "Sam Example",
-            "address": "sam.example@example.com"
+            "name": "{{parentName}}",
+            "address": "{{parentEmail}}"
         }
     },
     "toRecipients": [

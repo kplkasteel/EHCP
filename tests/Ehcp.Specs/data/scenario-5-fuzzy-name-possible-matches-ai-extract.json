@@ -3,9 +3,9 @@
   "reliability": true,
   "extractedChildren": [
     {
-      "name": "Freddy",
-      "nhsNumber": null,
-      "dateOfBirth": "2020-03-01",
+      "name": {{childName:json}},
+      "nhsNumber": {{nhsNumber:json}},
+      "dateOfBirth": {{dateOfBirth:json}},
       "relationships": [],
       "attributes": []
     }

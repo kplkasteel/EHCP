@@ -241,8 +241,8 @@ public sealed class MatchingService(
             child.DateOfBirth,
             entityId,
             possibleMatches ?? candidates?
-                .Select(candidate => new PossibleCaseMatch(
-                    candidate.EntityId, ConfidenceBand.High))
+                .Select(candidate => PossibleMatchScorer.Score(child, candidate))
+                .OrderByDescending(match => match.Score)
                 .ToArray() ?? [],
             [
                 .. child.Relationships

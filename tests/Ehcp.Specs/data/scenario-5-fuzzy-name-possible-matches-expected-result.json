@@ -1,16 +1,16 @@
 {
-  "id": "scenario-5-fuzzy-name-possible-matches",
-  "conversationId": "spec-thread-005",
+  "id": "{{emailId}}",
+  "conversationId": "{{conversationId}}",
   "direction": "inbound",
   "status": "Processed",
   "receivedDateTime": "2026-11-01T09:00:00Z",
   "children": [
     {
-      "name": "Freddy",
+      "name": {{childName:json}},
       "status": "PendingMatch",
-      "nhsNumber": null,
+      "nhsNumber": {{nhsNumber:json}},
       "caseId": null,
-      "dateOfBirth": "2020-03-01",
+      "dateOfBirth": {{dateOfBirth:json}},
       "matchedCaseId": null,
       "possibleCaseMatches": [
         {

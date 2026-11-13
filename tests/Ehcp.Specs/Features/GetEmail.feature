@@ -37,16 +37,36 @@ Scenario: Email with child information extracted but not enough to create a case
 	Then the email record should be retrieved matching "scenario-1-single-child-expected-result.json"
 
 @wip
-Scenario: Email with a fuzzy-matching child lists scored possible case matches
+Scenario Outline: Email with a fuzzy-matching child lists scored possible case matches
 	Given the mailbox "ehcp-team-shared-1" is selected
+	And the scenario values are
+		| key            | value            |
+		| emailId        | <emailId>        |
+		| conversationId | <conversationId> |
+		| parentName     | <parentName>     |
+		| parentEmail    | <parentEmail>    |
+	And the child identifiers are
+		| identifier  | value         |
+		| childName   | <childName>   |
+		| nhsNumber   | <nhsNumber>   |
+		| dateOfBirth | <dateOfBirth> |
+		| mosaicId    | <mosaicId>    |
+		| dfeId       | <dfeId>       |
+		| synergyId   | <synergyId>   |
 	And the database is setup to contain "scenario-5-fuzzy-name-possible-matches-data.json"
 	And the database contains cases "scenario-5-fuzzy-name-possible-matches-cases.json"
 	And we setup mock ai extraction to return dataset "scenario-5-fuzzy-name-possible-matches-ai-extract.json"
 	And we setup mock graph api to return dataset "scenario-5-fuzzy-name-possible-matches-graph-email.json"
 	When the email record "scenario-5-fuzzy-name-possible-matches-queue.json" is added to the queue
 	And we wait for the database processing status to be "Processed"
-	When a request is made to the /mailbox/"ehcp-team-shared-1"/emails/"scenario-5-fuzzy-name-possible-matches" endpoint
+	When a request is made to the /mailbox/"ehcp-team-shared-1"/emails/"<emailId>" endpoint
 	Then the email record should be retrieved matching "scenario-5-fuzzy-name-possible-matches-expected-result.json"
+
+	Examples:
+		| emailId                                | conversationId  | parentName  | parentEmail             | childName | nhsNumber | dateOfBirth | mosaicId | dfeId | synergyId |
+		| scenario-5-fuzzy-name-possible-matches | spec-thread-005 | Sam Example | sam.example@example.com | Freddy    |           | 2020-03-01  |          |       |           |
+		| spec-f-2                               | spec-thread-f2  | Pat Example | pat.example@example.com | Freddy    |           | 2020-03-01  |          |       |           |
+		| spec-f-3                               | spec-thread-f3  | Lee Example | lee.example@example.com | Freddy    |           | 2020-03-01  |          |       |           |
 
 Scenario Outline: Email with child information extracted and enough information should create a case
 	Given the mailbox "ehcp-team-shared-1" is selected
