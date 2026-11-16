@@ -1,0 +1,9 @@
+{
+  "id": "scenario-4-out-of-office",
+  "conversationId": "spec-thread-004",
+  "direction": "inbound",
+  "receivedDateTime": "2026-11-01T09:00:00+00:00",
+  "children": [],
+  "status": "Discarded",
+  "rationale": "Out of office reply."
+}

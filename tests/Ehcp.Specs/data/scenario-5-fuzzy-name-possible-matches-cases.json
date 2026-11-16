@@ -1,0 +1,26 @@
+[
+  {
+    "id": "spec-case-fred-bloggs",
+    "entityId": "spec-case-fred-bloggs",
+    "name": "Fred Bloggs",
+    "caseId": null,
+    "nhsNumber": "123 456 7890",
+    "dateOfBirth": "2020-03-01",
+    "relationships": [],
+    "attributes": [],
+    "communications": [],
+    "conflicts": []
+  },
+  {
+    "id": "spec-case-jones-smith",
+    "entityId": "spec-case-jones-smith",
+    "name": "Jones Smith",
+    "caseId": null,
+    "nhsNumber": "456 789 0123",
+    "dateOfBirth": "2020-03-01",
+    "relationships": [],
+    "attributes": [],
+    "communications": [],
+    "conflicts": []
+  }
+]

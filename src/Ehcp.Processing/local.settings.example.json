@@ -1,0 +1,13 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "AZURE_FUNCTIONS_ENVIRONMENT": "Development",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "ProcessingQueueName": "ehcp-processing",
+    "Cosmos__Key": "set-from-your-local-emulator",
+    "Processing__Graph__BaseUrl": "http://localhost:7101",
+    "Processing__Graph__Mailboxes__ehcp-team-shared-1": "ehcp-team-shared-1@example.com",
+    "Processing__Extraction__Endpoint": "http://localhost:7102/api/extract"
+  }
+}

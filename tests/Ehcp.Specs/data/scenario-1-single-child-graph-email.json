@@ -1,0 +1,35 @@
+{
+    "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('ehcp-team-shared-1%40example.com')/messages/$entity",
+    "@odata.etag": "W/\"CQAAABYAAAAxKqppwSbrQYVYcUrCQA4tAABbkz5A\"",
+    "id": "AAMkAGE1-spec-scenario-1-single-child",
+    "hasAttachments": false,
+    "subject": "Request for support for Alex Example",
+    "conversationId": "spec-thread-001",
+    "body": {
+        "contentType": "text",
+        "content": "Hello,\n\nI am writing to ask for an assessment for my son, Alex Example, who was born on 14 March 2016. He has difficulty with speech and language.\n\nKind regards,\nSam Example"
+    },
+    "sender": {
+        "emailAddress": {
+            "name": "Sam Example",
+            "address": "sam.example@example.com"
+        }
+    },
+    "from": {
+        "emailAddress": {
+            "name": "Sam Example",
+            "address": "sam.example@example.com"
+        }
+    },
+    "toRecipients": [
+        {
+            "emailAddress": {
+                "name": "Ehcp team",
+                "address": "ehcp-team@example.com"
+            }
+        }
+    ],
+    "ccRecipients": [],
+    "bccRecipients": [],
+    "replyTo": []
+}

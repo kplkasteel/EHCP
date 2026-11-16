@@ -1,0 +1,32 @@
+{
+  "id": "{{caseAlias}}",
+  "entityId": "{{caseAlias}}",
+  "name": {{childName:json}},
+  "caseId": null,
+  "nhsNumber": {{nhsNumber:json}},
+  "dateOfBirth": {{dateOfBirth:json}},
+  "relationships": [
+    {
+      "type": "parent",
+      "name": "{{parentName}}",
+      "email": "{{parentEmail}}",
+      "phone": null,
+      "confidenceBand": "VeryLow",
+      "userStatus": null,
+      "sourceEmailId": "{{emailId}}"
+    }
+  ],
+  "attributes": {{expectedAttributes}},
+  "communications": [
+    {
+      "emailId": "{{emailId}}",
+      "direction": "inbound",
+      "receivedDateTime": "2026-11-01T09:00:00+00:00",
+      "subject": "{{subject}}",
+      "summary": null,
+      "keyFacts": null,
+      "draftReply": null
+    }
+  ],
+  "conflicts": []
+}

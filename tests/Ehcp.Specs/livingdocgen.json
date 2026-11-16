@@ -1,0 +1,10 @@
+{
+  "featurePath": "Features",
+  "testResultsPath": "TestResults",
+  "outputPath": "living-documentation.html",
+  "title": "Ehcp Specs - Living Documentation",
+  "theme": "blue",
+  "testResults": {
+    "format": "trx"
+  }
+}
