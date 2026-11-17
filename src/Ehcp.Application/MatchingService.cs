@@ -2,12 +2,14 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Ehcp.Core;
+using Microsoft.Extensions.Logging;
 
 namespace Ehcp.Application;
 
 public sealed class MatchingService(
     ICaseLookup lookup,
-    IDocumentStore<CaseDocument> cases) : IMatchingService
+    IDocumentStore<CaseDocument> cases,
+    ILogger<MatchingService> logger) : IMatchingService
 {
     public async Task<ChildResult> MatchAsync(
         string mailboxId,
@@ -206,9 +208,26 @@ public sealed class MatchingService(
         if (child.DateOfBirth is null && string.IsNullOrWhiteSpace(child.Name))
             return [];
 
-        IReadOnlyList<CaseDocument> candidates = child.DateOfBirth is DateOnly dateOfBirth
-            ? await lookup.FindDateOfBirthCandidatesAsync(mailboxId, dateOfBirth, ct)
-            : await lookup.FindNameCandidatesAsync(mailboxId, child.Name!, ct);
+        var tasks = new List<Task<IReadOnlyList<CaseDocument>>>();
+
+        if (child.DateOfBirth is DateOnly dob)
+        {
+            tasks.Add(lookup.FindDateOfBirthCandidatesAsync(mailboxId, dob, ct));
+        }
+
+        if (!string.IsNullOrWhiteSpace(child.Name))
+        {
+            tasks.Add(lookup.FindNameCandidatesAsync(mailboxId, child.Name, ct));
+        }
+
+        var candidates = (await Task.WhenAll(tasks))
+            .SelectMany(x => x)
+            .DistinctBy(x => x.EntityId)
+            .ToArray();
+
+
+        logger.LogInformation(
+            $"Found {candidates.Length} possible matches for {mailboxId} child {child.Name} ({child.DateOfBirth})");
 
         return candidates
             .Select(candidate => PossibleMatchScorer.Score(child, candidate))

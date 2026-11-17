@@ -1,6 +1,7 @@
 using System.Globalization;
 using Ehcp.Application;
 using Ehcp.Core;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace Ehcp.Tests;
@@ -55,7 +56,7 @@ public sealed class FuzzyMatchingTests
     [InlineData("Fred Harper", "2020-03-01", "spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7")]
     [InlineData("Freddy Bloggs", "2020-03-01", "spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7")]
     [InlineData(null, null, "")]
-    [InlineData("Freddy", "2021-03-01", "")]
+    [InlineData("Freddy", "2021-03-01", "spec-case-fred-bloggs:Low:3")]
     public async Task PossibleMatchesHaveExactExpectedScoresAndOrdering(string? name, string? dob, string expected)
     {
         ChildResult result = await MatchAsync(name, dob);
@@ -119,7 +120,7 @@ public sealed class FuzzyMatchingTests
         var documents = Cases();
         var lookup = new FixtureLookup(documents);
         var store = new InMemoryCaseStore(documents);
-        var matcher = new MatchingService(lookup, store);
+        var matcher = new MatchingService(lookup, store, NullLogger<MatchingService>.Instance);
         var email = new EmailDocument("spec-email", "spec-thread", Direction.inbound,
             new DateTimeOffset(2026, 11, 1, 9, 0, 0, TimeSpan.Zero), []);
         var graph = new GraphEmail("graph-id", "spec-thread", Direction.inbound,
