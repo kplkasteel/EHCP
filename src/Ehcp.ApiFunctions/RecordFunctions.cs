@@ -4,11 +4,15 @@ using Ehcp.Core;
 using Ehcp.Infrastructure;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.Extensions.Logging;
 
 namespace Ehcp.ApiFunctions;
 
 // Read-only endpoints used by the Specs.
-public sealed class RecordFunctions(IDocumentStore<CaseDocument> cases, IDocumentStore<EmailDocument> emails)
+public sealed class RecordFunctions(
+    IDocumentStore<CaseDocument> cases,
+    IDocumentStore<EmailDocument> emails,
+    ILogger<RecordFunctions> logger)
 {
     [Function("GetCase")]
     public async Task<HttpResponseData> GetCaseAsync(
@@ -27,6 +31,7 @@ public sealed class RecordFunctions(IDocumentStore<CaseDocument> cases, IDocumen
         }
         catch (Exception ex)
         {
+            LogFailure(ex, "GetCase");
             return await ErrorAsync(req, ex);
         }
     }
@@ -44,7 +49,25 @@ public sealed class RecordFunctions(IDocumentStore<CaseDocument> cases, IDocumen
         }
         catch (Exception ex)
         {
+            LogFailure(ex, "GetEmail");
             return await ErrorAsync(req, ex);
+        }
+    }
+
+    private void LogFailure(Exception exception, string operation)
+    {
+        // No document bodies, child names, or request identifiers are logged.
+        switch (exception)
+        {
+            case DocumentStoreException { Failure: StoreFailure.NotFound }:
+                logger.LogDebug("{Operation}: record not found", operation);
+                break;
+            case DocumentValidationException:
+                logger.LogWarning("{Operation}: invalid record identifier", operation);
+                break;
+            default:
+                logger.LogError(exception, "{Operation} failed", operation);
+                break;
         }
     }
 
@@ -67,8 +90,6 @@ public sealed class RecordFunctions(IDocumentStore<CaseDocument> cases, IDocumen
             DocumentStoreException => (HttpStatusCode.ServiceUnavailable, "UNAVAILABLE", "Document storage is temporarily unavailable."),
             _ => (HttpStatusCode.InternalServerError, "INTERNAL_ERROR", "An unexpected error occurred.")
         };
-        // Do not log payloads or identifiers; the exception type is enough to diagnose the failure.
-        if ((int)status >= 500) Console.Error.WriteLine($"Request failed ({ex.GetType().Name}).");
         HttpResponseData response = req.CreateResponse(status);
         response.Headers.Add("Content-Type", "application/json; charset=utf-8");
         await response.WriteStringAsync(JsonSerializer.Serialize(new { code, message }, new JsonSerializerOptions(JsonSerializerDefaults.Web)));

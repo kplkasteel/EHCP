@@ -11,6 +11,8 @@ TestResults/
 **/*.feature.cs
 **/local.settings.json
 src/Ehcp.Processing/.local/
+**/logs/
+**/*.clef
 
 __azurite_db_queue__.json
 __azurite_db_queue_extent__.json

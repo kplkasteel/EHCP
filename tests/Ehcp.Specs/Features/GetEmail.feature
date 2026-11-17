@@ -80,12 +80,16 @@ Scenario Outline: Email with a fuzzy-matching child lists scored possible case m
 		| spec-f-fuzzy-name-only                 | spec-thread-f09 | Sam Example | sam.example@example.com | Freddy      |           |             |          |       |           |        | spec-case-fred-bloggs:Low:3                                 |
 		| spec-f-fredd-name-only                 | spec-thread-f10 | Sam Example | sam.example@example.com | Fredd       |           |             |          |       |           |        | spec-case-fred-bloggs:Low:3                                 |
 		| spec-f-jones-name-only                 | spec-thread-f11 | Sam Example | sam.example@example.com | Jones       |           |             |          |       |           |        | spec-case-jones-smith:Low:3                                 |
-		| spec-f-full-name-only                  | spec-thread-f12 | Sam Example | sam.example@example.com | Fred Bloggs |           |             |          |       |           |        | spec-case-fred-bloggs:Medium:11                             |
-		| spec-f-jones-full-only                 | spec-thread-f13 | Sam Example | sam.example@example.com | Jones Smith |           |             |          |       |           |        | spec-case-jones-smith:Medium:11                             |
-		| spec-f-exact-fred-dob                  | spec-thread-f14 | Sam Example | sam.example@example.com | Fred Bloggs |           | 2020-03-01  |          |       |           |        | spec-case-fred-bloggs:Medium:18;spec-case-jones-smith:Low:7 |
-		| spec-f-exact-jones-dob                 | spec-thread-f15 | Sam Example | sam.example@example.com | Jones Smith |           | 2020-03-01  |          |       |           |        | spec-case-jones-smith:Medium:18;spec-case-fred-bloggs:Low:7 |
+		| spec-f-full-name-only                  | spec-thread-f12 | Sam Example | sam.example@example.com | Fred Bloggs |           |             |          |       |           |        | spec-case-fred-bloggs:Low:5                             |
+		| spec-f-jones-full-only                 | spec-thread-f13 | Sam Example | sam.example@example.com | Jones Smith |           |             |          |       |           |        | spec-case-jones-smith:Low:5                             |
+		| spec-f-exact-fred-dob                  | spec-thread-f14 | Sam Example | sam.example@example.com | Fred Bloggs |           | 2020-03-01  |          |       |           |        | spec-case-fred-bloggs:Medium:12;spec-case-jones-smith:Low:7 |
+		| spec-f-exact-jones-dob                 | spec-thread-f15 | Sam Example | sam.example@example.com | Jones Smith |           | 2020-03-01  |          |       |           |        | spec-case-jones-smith:Medium:12;spec-case-fred-bloggs:Low:7 |
 		| spec-f-no-evidence                     | spec-thread-f16 | Sam Example | sam.example@example.com |             |           |             |          |       |           |        |                                                             |
 		| spec-f-different-dob                   | spec-thread-f17 | Sam Example | sam.example@example.com | Freddy      |           | 2021-03-01  |          |       |           |        |                                                             |
+		| spec-f-full-lowercase-only | spec-thread-f18 | Sam Example | sam.example@example.com | fReD bLoGgS |  |  |  |  |  |  | spec-case-fred-bloggs:Low:5 |
+		| spec-f-full-lowercase-dob | spec-thread-f19 | Sam Example | sam.example@example.com | fReD bLoGgS |  | 2020-03-01 |  |  |  |  | spec-case-fred-bloggs:Medium:12;spec-case-jones-smith:Low:7 |
+		| spec-f-different-surname-dob | spec-thread-f20 | Sam Example | sam.example@example.com | Fred Harper |  | 2020-03-01 |  |  |  |  | spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7 |
+		| spec-f-fuzzy-first-name-dob | spec-thread-f21 | Sam Example | sam.example@example.com | Freddy Bloggs |  | 2020-03-01 |  |  |  |  | spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7 |
 
 Scenario Outline: Strong identifier matching folds a case or returns scored conflicts
 	Given the mailbox "ehcp-team-shared-1" is selected
@@ -137,6 +141,8 @@ Scenario Outline: Strong identifier matching folds a case or returns scored conf
 		| spec-s-competing-ids              | spec-thread-s13 | Sam Example | sam.example@example.com | Alice       | 123 456 7890 |           |             |          | D-20002 |           | Conflict       |                       | spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Medium:10 |
 		| spec-s-same-case-two-ids          | spec-thread-s14 | Sam Example | sam.example@example.com | Alice       | 123 456 7890 |           | 2021-03-01  |          | D-20001 |           | Conflict       |                       | spec-case-fred-bloggs:High:20                                   |
 		| spec-s-competing-dob-ids          | spec-thread-s15 | Sam Example | sam.example@example.com | Alice       | 123 456 7890 |           | 2020-03-01  |          | D-20002 |           | Conflict       |                       | spec-case-fred-bloggs:Medium:17;spec-case-jones-smith:Medium:17 |
+		| spec-s-exact-name-wrong-dob | spec-thread-s16 | Sam Example | sam.example@example.com | Fred Bloggs | 123 456 7890 |  | 2021-03-01 |  |  |  | Conflict |  | spec-case-fred-bloggs:Medium:15 |
+		| spec-s-exact-name-competing-ids | spec-thread-s17 | Sam Example | sam.example@example.com | Fred Bloggs | 123 456 7890 |  | 2020-03-01 |  | D-20002 |  | Conflict |  | spec-case-fred-bloggs:High:22;spec-case-jones-smith:Medium:17 |
 
 Scenario Outline: Email with child information extracted and enough information should create a case
 	Given the mailbox "ehcp-team-shared-1" is selected

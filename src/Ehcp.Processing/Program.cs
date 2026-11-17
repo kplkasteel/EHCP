@@ -1,5 +1,6 @@
 using Ehcp.Application;
 using Ehcp.Infrastructure;
+using Ehcp.Logging;
 using Microsoft.Azure.Functions.Worker.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -7,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 var builder = FunctionsApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.json", optional: true)
     .AddEnvironmentVariables();
+builder.AddEhcpLogging("Ehcp.Processing");
 builder.Services.AddEhcpInfrastructure(builder.Configuration);
 builder.Services.AddEhcpProcessing();
 builder.Services.AddEhcpProcessingAdapters(builder.Configuration);

@@ -4,6 +4,8 @@ namespace Ehcp.Application;
 
 internal static class PossibleMatchScorer
 {
+    // Each rule here represents independent evidence. Name matches are handled
+    // separately so an exact name cannot also earn fuzzy-name and initials points.
     private static readonly WeightedRule[] Rules =
     [
         new("NHS Number", 10, (child, candidate) =>
@@ -16,12 +18,6 @@ internal static class PossibleMatchScorer
             Shares(StrongIdentifiers.From(child).MosaicIds, StrongIdentifiers.From(candidate).MosaicIds)),
         new("DOB", 7, (child, candidate) =>
             child.DateOfBirth is not null && child.DateOfBirth == candidate.DateOfBirth),
-        new("Full Name", 5, (child, candidate) =>
-            Normalize(child.Name) is { Length: > 0 } name && name == Normalize(candidate.Name)),
-        new("First Name / Fuzzy Name", 3, (child, candidate) =>
-            FirstNamesMatch(child.Name, candidate.Name)),
-        new("Initials", 3, (child, candidate) =>
-            Initials(child.Name) is { Length: > 0 } initials && initials == Initials(candidate.Name)),
         new("Parent Name / Parents Name", 2, (child, candidate) =>
             Shares(child.Relationships.Select(item => Normalize(item.Name)),
                 candidate.Relationships.Select(item => Normalize(item.Name)))),
@@ -36,10 +32,24 @@ internal static class PossibleMatchScorer
 
     public static PossibleCaseMatch Score(ExtractedChild child, CaseDocument candidate)
     {
-        double score = Rules
+        // The name rules form one evidence group: use the best match only.
+        // Other independent evidence (DOB, IDs, relationships, attributes) remains additive.
+        double score = NameScore(child.Name, candidate.Name) + Rules
             .Where(rule => rule.Matches(child, candidate))
             .Sum(rule => rule.Weight);
         return new PossibleCaseMatch(candidate.EntityId, BandFor(score), score);
+    }
+
+    private static int NameScore(string? childName, string candidateName)
+    {
+        string name = Normalize(childName);
+        if (name.Length == 0) return 0;
+
+        if (name == Normalize(candidateName)) return 5;
+        if (FirstNamesMatch(childName, candidateName)) return 3;
+
+        string initials = Initials(childName);
+        return initials.Length > 0 && initials == Initials(candidateName) ? 3 : 0;
     }
 
     private static ConfidenceBand BandFor(double score) => score switch
