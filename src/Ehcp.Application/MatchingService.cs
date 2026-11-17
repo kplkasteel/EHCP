@@ -203,17 +203,18 @@ public sealed class MatchingService(
     private async Task<IReadOnlyList<PossibleCaseMatch>> FindPossibleMatchesAsync(
         string mailboxId, ExtractedChild child, CancellationToken ct)
     {
-        if (child.DateOfBirth is not DateOnly dateOfBirth)
-        {
+        if (child.DateOfBirth is null && string.IsNullOrWhiteSpace(child.Name))
             return [];
-        }
 
-        IReadOnlyList<CaseDocument> candidates =
-            await lookup.FindDateOfBirthCandidatesAsync(mailboxId, dateOfBirth, ct);
+        IReadOnlyList<CaseDocument> candidates = child.DateOfBirth is DateOnly dateOfBirth
+            ? await lookup.FindDateOfBirthCandidatesAsync(mailboxId, dateOfBirth, ct)
+            : await lookup.FindNameCandidatesAsync(mailboxId, child.Name!, ct);
 
         return candidates
             .Select(candidate => PossibleMatchScorer.Score(child, candidate))
+            .Where(match => match.Score > 0)
             .OrderByDescending(match => match.Score)
+            .ThenBy(match => match.EntityId, StringComparer.Ordinal)
             .ToArray();
     }
 
@@ -243,6 +244,7 @@ public sealed class MatchingService(
             possibleMatches ?? candidates?
                 .Select(candidate => PossibleMatchScorer.Score(child, candidate))
                 .OrderByDescending(match => match.Score)
+                .ThenBy(match => match.EntityId, StringComparer.Ordinal)
                 .ToArray() ?? [],
             [
                 .. child.Relationships

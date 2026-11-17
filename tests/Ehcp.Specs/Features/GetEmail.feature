@@ -36,23 +36,24 @@ Scenario: Email with child information extracted but not enough to create a case
 	When a request is made to the /mailbox/"ehcp-team-shared-1"/emails/"scenario-1-single-child" endpoint
 	Then the email record should be retrieved matching "scenario-1-single-child-expected-result.json"
 
-@wip
 Scenario Outline: Email with a fuzzy-matching child lists scored possible case matches
 	Given the mailbox "ehcp-team-shared-1" is selected
 	And the scenario values are
-		| key            | value            |
-		| emailId        | <emailId>        |
+		| key | value |
+		| emailId | <emailId> |
 		| conversationId | <conversationId> |
-		| parentName     | <parentName>     |
-		| parentEmail    | <parentEmail>    |
+		| parentName | <parentName> |
+		| parentEmail | <parentEmail> |
+		| expectedMatches | <expectedMatches> |
 	And the child identifiers are
-		| identifier  | value         |
-		| childName   | <childName>   |
-		| nhsNumber   | <nhsNumber>   |
+		| identifier | value |
+		| childName | <childName> |
+		| nhsNumber | <nhsNumber> |
+		| caseId | <caseId> |
 		| dateOfBirth | <dateOfBirth> |
-		| mosaicId    | <mosaicId>    |
-		| dfeId       | <dfeId>       |
-		| synergyId   | <synergyId>   |
+		| mosaicId | <mosaicId> |
+		| dfeId | <dfeId> |
+		| synergyId | <synergyId> |
 	And the database is setup to contain "scenario-5-fuzzy-name-possible-matches-data.json"
 	And the database contains cases "scenario-5-fuzzy-name-possible-matches-cases.json"
 	And we setup mock ai extraction to return dataset "scenario-5-fuzzy-name-possible-matches-ai-extract.json"
@@ -61,12 +62,81 @@ Scenario Outline: Email with a fuzzy-matching child lists scored possible case m
 	And we wait for the database processing status to be "Processed"
 	When a request is made to the /mailbox/"ehcp-team-shared-1"/emails/"<emailId>" endpoint
 	Then the email record should be retrieved matching "scenario-5-fuzzy-name-possible-matches-expected-result.json"
-//These examples need to inject the expected matches expected result json. Then also test a few permutations i.e. DOB + Fuzzy Name = Expected Score (Done), Full Name only = Expected Score, DOB only = Expected Score, 
+
+# Expected matches are ordered id:ConfidenceBand:score entries separated by semicolons.
+# Leave expectedMatches blank to assert an empty possibleCaseMatches array.
+# Only no-strong-ID rows can remain PendingMatch. Strong-ID rows fold or conflict.
 	Examples:
-		| emailId                                | conversationId  | parentName  | parentEmail             | childName | nhsNumber | dateOfBirth | mosaicId | dfeId | synergyId |
-		| scenario-5-fuzzy-name-possible-matches | spec-thread-005 | Sam Example | sam.example@example.com | Freddy    |           | 2020-03-01  |          |       |           |
-		| spec-f-2                               | spec-thread-f2  | Pat Example | pat.example@example.com | Freddy    |           | 2020-03-01  |          |       |           |
-		| spec-f-3                               | spec-thread-f3  | Lee Example | lee.example@example.com | Freddy    |           | 2020-03-01  |          |       |           |
+		| emailId                                | conversationId  | parentName  | parentEmail             | childName   | nhsNumber | dateOfBirth | mosaicId | dfeId | synergyId | caseId | expectedMatches                                             |
+		| scenario-5-fuzzy-name-possible-matches | spec-thread-005 | Sam Example | sam.example@example.com | Freddy      |           | 2020-03-01  |          |       |           |        | spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7 |
+		| spec-f-fredd-dob                       | spec-thread-f01 | Sam Example | sam.example@example.com | Fredd       |           | 2020-03-01  |          |       |           |        | spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7 |
+		| spec-f-fred-dob                        | spec-thread-f02 | Sam Example | sam.example@example.com | Fred        |           | 2020-03-01  |          |       |           |        | spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7 |
+		| spec-f-frederick-dob                   | spec-thread-f03 | Sam Example | sam.example@example.com | Frederick   |           | 2020-03-01  |          |       |           |        | spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7 |
+		| spec-f-jones-dob                       | spec-thread-f04 | Sam Example | sam.example@example.com | Jones       |           | 2020-03-01  |          |       |           |        | spec-case-jones-smith:Medium:10;spec-case-fred-bloggs:Low:7 |
+		| spec-f-other-name-dob                  | spec-thread-f05 | Sam Example | sam.example@example.com | Martha      |           | 2020-03-01  |          |       |           |        | spec-case-fred-bloggs:Low:7;spec-case-jones-smith:Low:7     |
+		| spec-f-dob-only                        | spec-thread-f06 | Sam Example | sam.example@example.com |             |           | 2020-03-01  |          |       |           |        | spec-case-fred-bloggs:Low:7;spec-case-jones-smith:Low:7     |
+		| spec-f-fred-initial-dob                | spec-thread-f07 | Sam Example | sam.example@example.com | F. Bloggs   |           | 2020-03-01  |          |       |           |        | spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7 |
+		| spec-f-jones-initial-dob               | spec-thread-f08 | Sam Example | sam.example@example.com | J. Smith    |           | 2020-03-01  |          |       |           |        | spec-case-jones-smith:Medium:10;spec-case-fred-bloggs:Low:7 |
+		| spec-f-fuzzy-name-only                 | spec-thread-f09 | Sam Example | sam.example@example.com | Freddy      |           |             |          |       |           |        | spec-case-fred-bloggs:Low:3                                 |
+		| spec-f-fredd-name-only                 | spec-thread-f10 | Sam Example | sam.example@example.com | Fredd       |           |             |          |       |           |        | spec-case-fred-bloggs:Low:3                                 |
+		| spec-f-jones-name-only                 | spec-thread-f11 | Sam Example | sam.example@example.com | Jones       |           |             |          |       |           |        | spec-case-jones-smith:Low:3                                 |
+		| spec-f-full-name-only                  | spec-thread-f12 | Sam Example | sam.example@example.com | Fred Bloggs |           |             |          |       |           |        | spec-case-fred-bloggs:Medium:11                             |
+		| spec-f-jones-full-only                 | spec-thread-f13 | Sam Example | sam.example@example.com | Jones Smith |           |             |          |       |           |        | spec-case-jones-smith:Medium:11                             |
+		| spec-f-exact-fred-dob                  | spec-thread-f14 | Sam Example | sam.example@example.com | Fred Bloggs |           | 2020-03-01  |          |       |           |        | spec-case-fred-bloggs:Medium:18;spec-case-jones-smith:Low:7 |
+		| spec-f-exact-jones-dob                 | spec-thread-f15 | Sam Example | sam.example@example.com | Jones Smith |           | 2020-03-01  |          |       |           |        | spec-case-jones-smith:Medium:18;spec-case-fred-bloggs:Low:7 |
+		| spec-f-no-evidence                     | spec-thread-f16 | Sam Example | sam.example@example.com |             |           |             |          |       |           |        |                                                             |
+		| spec-f-different-dob                   | spec-thread-f17 | Sam Example | sam.example@example.com | Freddy      |           | 2021-03-01  |          |       |           |        |                                                             |
+
+Scenario Outline: Strong identifier matching folds a case or returns scored conflicts
+	Given the mailbox "ehcp-team-shared-1" is selected
+	And the scenario values are
+		| key | value |
+		| emailId | <emailId> |
+		| conversationId | <conversationId> |
+		| parentName | <parentName> |
+		| parentEmail | <parentEmail> |
+		| expectedMatches | <expectedMatches> |
+		| expectedStatus | <expectedStatus> |
+		| expectedCaseId | <expectedCaseId> |
+	And the child identifiers are
+		| identifier | value |
+		| childName | <childName> |
+		| nhsNumber | <nhsNumber> |
+		| caseId | <caseId> |
+		| dateOfBirth | <dateOfBirth> |
+		| mosaicId | <mosaicId> |
+		| dfeId | <dfeId> |
+		| synergyId | <synergyId> |
+	And the database is setup to contain "scenario-5-fuzzy-name-possible-matches-data.json"
+	And the database contains cases "scenario-5-fuzzy-name-possible-matches-cases.json"
+	And we setup mock ai extraction to return dataset "scenario-5-fuzzy-name-possible-matches-ai-extract.json"
+	And we setup mock graph api to return dataset "scenario-5-fuzzy-name-possible-matches-graph-email.json"
+	When the email record "scenario-5-fuzzy-name-possible-matches-queue.json" is added to the queue
+	And we wait for the database processing status to be "Processed"
+	When a request is made to the /mailbox/"ehcp-team-shared-1"/emails/"<emailId>" endpoint
+	Then the email record should be retrieved matching "scenario-5-fuzzy-name-possible-matches-expected-result.json"
+	And the email child should have matched case id "<expectedCaseId>"
+
+# Expected matches are ordered id:ConfidenceBand:score entries separated by semicolons.
+# Leave expectedMatches blank to assert an empty possibleCaseMatches array.
+# Only no-strong-ID rows can remain PendingMatch. Strong-ID rows fold or conflict.
+	Examples:
+		| emailId                           | conversationId  | parentName  | parentEmail             | childName   | nhsNumber    | caseId    | dateOfBirth | mosaicId | dfeId   | synergyId | expectedStatus | expectedCaseId        | expectedMatches                                                 |
+		| spec-s-nhs-fold                   | spec-thread-s01 | Sam Example | sam.example@example.com | Fred Bloggs | 123 456 7890 |           | 2020-03-01  |          |         |           | Folded         | spec-case-fred-bloggs |                                                                 |
+		| spec-s-dfe-fold                   | spec-thread-s02 | Sam Example | sam.example@example.com | Fred Bloggs |              |           | 2020-03-01  |          | D-20001 |           | Folded         | spec-case-fred-bloggs |                                                                 |
+		| spec-s-mosaic-fold                | spec-thread-s03 | Sam Example | sam.example@example.com | Fred Bloggs |              |           | 2020-03-01  | M-10001  |         |           | Folded         | spec-case-fred-bloggs |                                                                 |
+		| spec-s-synergy-attribute-fold     | spec-thread-s04 | Sam Example | sam.example@example.com | Fred Bloggs |              |           | 2020-03-01  |          |         | S-1234567 | Folded         | spec-case-fred-bloggs |                                                                 |
+		| spec-s-synergy-field-fold         | spec-thread-s05 | Sam Example | sam.example@example.com | Fred Bloggs |              | S-1234567 | 2020-03-01  |          |         |           | Folded         | spec-case-fred-bloggs |                                                                 |
+		| spec-s-nhs-jones-fold             | spec-thread-s06 | Sam Example | sam.example@example.com | Jones Smith | 456 789 0123 |           |             |          |         |           | Folded         | spec-case-jones-smith |                                                                 |
+		| spec-s-dfe-jones-fold             | spec-thread-s07 | Sam Example | sam.example@example.com | Jones Smith |              |           |             |          | D-20002 |           | Folded         | spec-case-jones-smith |                                                                 |
+		| spec-s-nhs-conflict               | spec-thread-s08 | Sam Example | sam.example@example.com | Alice       | 123 456 7890 |           | 2021-03-01  |          |         |           | Conflict       |                       | spec-case-fred-bloggs:Medium:10                                 |
+		| spec-s-dfe-conflict               | spec-thread-s09 | Sam Example | sam.example@example.com | Alice       |              |           | 2021-03-01  |          | D-20001 |           | Conflict       |                       | spec-case-fred-bloggs:Medium:10                                 |
+		| spec-s-mosaic-conflict            | spec-thread-s10 | Sam Example | sam.example@example.com | Alice       |              |           | 2021-03-01  | M-10001  |         |           | Conflict       |                       | spec-case-fred-bloggs:Medium:10                                 |
+		| spec-s-synergy-attribute-conflict | spec-thread-s11 | Sam Example | sam.example@example.com | Alice       |              |           | 2021-03-01  |          |         | S-1234567 | Conflict       |                       | spec-case-fred-bloggs:Medium:10                                 |
+		| spec-s-synergy-field-conflict     | spec-thread-s12 | Sam Example | sam.example@example.com | Alice       |              | S-1234567 | 2021-03-01  |          |         |           | Conflict       |                       | spec-case-fred-bloggs:Medium:10                                 |
+		| spec-s-competing-ids              | spec-thread-s13 | Sam Example | sam.example@example.com | Alice       | 123 456 7890 |           |             |          | D-20002 |           | Conflict       |                       | spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Medium:10 |
+		| spec-s-same-case-two-ids          | spec-thread-s14 | Sam Example | sam.example@example.com | Alice       | 123 456 7890 |           | 2021-03-01  |          | D-20001 |           | Conflict       |                       | spec-case-fred-bloggs:High:20                                   |
+		| spec-s-competing-dob-ids          | spec-thread-s15 | Sam Example | sam.example@example.com | Alice       | 123 456 7890 |           | 2020-03-01  |          | D-20002 |           | Conflict       |                       | spec-case-fred-bloggs:Medium:17;spec-case-jones-smith:Medium:17 |
 
 Scenario Outline: Email with child information extracted and enough information should create a case
 	Given the mailbox "ehcp-team-shared-1" is selected
@@ -97,7 +167,7 @@ Scenario Outline: Email with child information extracted and enough information 
 Examples:
 	| emailId  | conversationId | parentName  | parentEmail             | childName    | nhsNumber    | dateOfBirth | mosaicId | dfeId   | synergyId |
 	| spec-c-1 | spec-thread-c1 | Sam Example | sam.example@example.com | Alex Example | 987 654 3210 | 2016-03-14  |          |         |           |
-	| spec-c-1 | spec-thread-c1 | Sam Example | sam.example@example.com | Alex Example | 987 654 3210 |             |          |         |           | 
+	| spec-c-1 | spec-thread-c1 | Sam Example | sam.example@example.com | Alex Example | 987 654 3210 |             |          |         |           |
 	| spec-c-2 | spec-thread-c2 | Sam Example | sam.example@example.com | Alex Example |              |             |          | D-20001 |           |
 	| spec-c-3 | spec-thread-c3 | Sam Example | sam.example@example.com | Alex         |              |             | M-10001  | D-20001 |           |
 	| spec-c-3 | spec-thread-c3 | Sam Example | sam.example@example.com | Alex         |              |             | M-10001  |         |           |

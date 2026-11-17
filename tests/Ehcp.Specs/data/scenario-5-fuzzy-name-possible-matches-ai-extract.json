@@ -2,12 +2,13 @@
   "relevance": true,
   "reliability": true,
   "extractedChildren": [
-    {// might be missing other identifiers i.e. Dfe, mosiac, etc. whatever is in the code. 
+    {
       "name": {{childName:json}},
       "nhsNumber": {{nhsNumber:json}},
+      "caseId": {{caseId:json}},
       "dateOfBirth": {{dateOfBirth:json}},
       "relationships": [],
-      "attributes": []
+      "attributes": {{attributes}}
     }
   ]
 }

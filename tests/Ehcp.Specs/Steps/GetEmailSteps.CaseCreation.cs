@@ -1,23 +1,26 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using Ehcp.Core;
 using Reqnroll;
 
 namespace Ehcp.Specs.Steps;
 
-// Fixtures named case-creation-* are templates, filled from the Scenario Outline's tables for this scenario.
+// Case-creation and scenario-5 fixtures are templates, populated from Scenario Outline tables.
 // Files without tokens are returned unchanged, so other scenarios are unaffected.
 //   {{name}}               string, JSON-escaped; sits inside quotes already in the file
 //   {{name:json}}          JSON literal: quoted string, or null when the identifier is blank
 //   {{attributes}}         JSON array of non-typed identifiers with confidenceBand (ai-extract input)
 //   {{expectedAttributes}} JSON array of non-typed identifiers with type and value only (expected output)
+//   {{expectedMatches}}    exact ordered array, supplied as id:ConfidenceBand:score in Examples
 public sealed partial class GetEmailSteps
 {
     private const string GraphMessageIdPrefix = "AAMkAGE1-spec-";
     private static readonly Regex TokenPattern = new(@"\{\{(\w+)(:json)?\}\}", RegexOptions.Compiled);
     private static readonly HashSet<string> TypedIdentifiers = new(StringComparer.Ordinal)
     {
-        "childName", "nhsNumber", "dateOfBirth"
+        "childName", "nhsNumber", "caseId", "dateOfBirth"
     };
 
     private Dictionary<string, string> _scenarioValues = new(StringComparer.Ordinal);
@@ -42,6 +45,13 @@ public sealed partial class GetEmailSteps
             ?? throw new InvalidOperationException("Set 'the child identifiers are' before using dataset templates.");
         Dictionary<string, string?> tokens = BuildTokens(identifiers);
         Dictionary<string, string> fragments = BuildFragments(identifiers);
+        if (_scenarioValues.TryGetValue("expectedMatches", out string? expectedMatches))
+            fragments["expectedMatches"] = BuildExpectedMatches(expectedMatches);
+        else if (text.Contains("{{expectedMatches}}", StringComparison.Ordinal))
+            throw new InvalidOperationException(
+                "This fixture uses {{expectedMatches}}, but the scenario values table has no " +
+                "expectedMatches row. Add '| expectedMatches | <expectedMatches> |' to the " +
+                "scenario values table and an expectedMatches Examples column.");
         return TokenPattern.Replace(text, match => ResolveToken(match, tokens, fragments));
     }
 
@@ -62,6 +72,9 @@ public sealed partial class GetEmailSteps
             ["childName"] = childName,
             ["childLabel"] = childLabel,
             ["nhsNumber"] = identifiers.GetValueOrDefault("nhsNumber"),
+            ["caseId"] = identifiers.GetValueOrDefault("caseId"),
+            ["expectedStatus"] = _scenarioValues.GetValueOrDefault("expectedStatus", "PendingMatch"),
+            ["expectedCaseId"] = _scenarioValues.GetValueOrDefault("expectedCaseId") is string id && id.Length > 0 ? id : null,
             ["dateOfBirth"] = identifiers.GetValueOrDefault("dateOfBirth"),
             ["subject"] = $"Request for support for {childLabel}",
             ["identifierLines"] = string.Join("\n", identifiers
@@ -81,6 +94,46 @@ public sealed partial class GetEmailSteps
             ["expectedAttributes"] = JsonSerializer.Serialize(others
                 .Select(pair => new { type = pair.Key, value = pair.Value })),
         };
+    }
+
+    // Example syntax: case-id:Medium:10;other-id:Low:7 (blank means no matches).
+    // Expectations are declared in the feature, not calculated from the production scorer.
+    private static string BuildExpectedMatches(string specification)
+    {
+        if (string.IsNullOrWhiteSpace(specification)) return "[]";
+        var entries = specification.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        var expected = new List<object>();
+        foreach (string entry in entries)
+        {
+            string[] fields = entry.Split(':', StringSplitOptions.TrimEntries);
+            if (fields.Length != 3 || string.IsNullOrWhiteSpace(fields[0])
+                || !Enum.TryParse<ConfidenceBand>(fields[1], false, out ConfidenceBand band)
+                || !Enum.IsDefined(band)
+                || !double.TryParse(fields[2], NumberStyles.Float, CultureInfo.InvariantCulture, out double score)
+                || !double.IsFinite(score) || score <= 0
+                || !ids.Add(fields[0]))
+                throw new InvalidOperationException($"Invalid expectedMatches entry: '{entry}'. Use id:ConfidenceBand:score.");
+            expected.Add(new { entityId = fields[0], confidenceBand = fields[1], score });
+        }
+        return JsonSerializer.Serialize(expected);
+    }
+
+    // Validate the actual matched case identifier against the expected seeded case.
+    // The generic JSON matcher treats dynamic case IDs as aliases, so this step is
+    // necessary for a strong-ID test to fail if it folds into the WRONG case.
+    [Then("the email child should have matched case id {string}")]
+    public async Task ThenEmailChildShouldHaveMatchedCaseId(string expectedCaseId)
+    {
+        if (_response is null)
+            throw new InvalidOperationException("Request the email before checking its matched case ID.");
+        using var document = JsonDocument.Parse(await _response.Content.ReadAsStringAsync());
+        JsonElement children = document.RootElement.GetProperty("children");
+        if (children.GetArrayLength() != 1)
+            throw new InvalidOperationException($"Expected exactly one child, found {children.GetArrayLength()}.");
+        JsonElement actual = children[0].GetProperty("matchedCaseId");
+        string? actualId = actual.ValueKind == JsonValueKind.Null ? null : actual.GetString();
+        Xunit.Assert.Equal(string.IsNullOrWhiteSpace(expectedCaseId) ? null : expectedCaseId, actualId);
     }
 
     private static string ResolveToken(

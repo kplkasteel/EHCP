@@ -7,26 +7,14 @@
   "children": [
     {
       "name": {{childName:json}},
-      "status": "PendingMatch",
+      "status": "{{expectedStatus}}",
       "nhsNumber": {{nhsNumber:json}},
-      "caseId": null,
+      "caseId": {{caseId:json}},
       "dateOfBirth": {{dateOfBirth:json}},
-      "matchedCaseId": null,
-      "possibleCaseMatches": [
-        // This array needs to be tokenised so that we can say what should be expected in the test scenario examples
-        {
-          "entityId": "spec-case-fred-bloggs",
-          "confidenceBand": "Medium",
-          "score": 10.0
-        },
-        {
-          "entityId": "spec-case-jones-smith",
-          "confidenceBand": "Low",
-          "score": 7.0
-        }
-      ],
+      "matchedCaseId": {{expectedCaseId:json}},
+      "possibleCaseMatches": {{expectedMatches}},
       "relationships": [],
-      "attributes": []
+      "attributes": {{expectedAttributes}}
     }
   ]
 }
