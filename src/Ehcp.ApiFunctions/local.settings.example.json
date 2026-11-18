@@ -4,6 +4,8 @@
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
     "AZURE_FUNCTIONS_ENVIRONMENT": "Development",
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-    "Cosmos__Key": "set-from-your-local-emulator"
+    "Cosmos__Key": "set-from-your-local-emulator",
+    "EHCP_SEQ_ENABLED": "true",
+    "EHCP_SEQ_URL": "http://localhost:5341"
   }
 }

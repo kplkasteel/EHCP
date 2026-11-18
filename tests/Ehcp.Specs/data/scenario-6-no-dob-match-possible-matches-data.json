@@ -1,0 +1,22 @@
+[
+  {
+    "id": "{{emailId}}",
+    "conversationId": "{{conversationId}}",
+    "direction": "inbound",
+    "status": "Unprocessed",
+    "receivedDateTime": "2026-11-01T09:00:00Z",
+    "children": [
+      {
+        "name": null,
+        "status": "Unprocessed",
+        "nhsNumber": null,
+        "caseId": null,
+        "dateOfBirth": null,
+        "matchedCaseId": null,
+        "possibleCaseMatches": [],
+        "relationships": [],
+        "attributes": []
+      }
+    ]
+  }
+]

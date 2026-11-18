@@ -1,0 +1,58 @@
+[
+  {
+    "id": "spec-case-fred-bloggs",
+    "entityId": "spec-case-fred-bloggs",
+    "name": "Fred Bloggs",
+    "caseId": "S-1234567",
+    "nhsNumber": "123 456 7890",
+    "dateOfBirth": "2020-03-01",
+    "relationships": [],
+    "attributes": [
+      {
+        "type": "dfeId",
+        "value": "D-20001",
+        "confidenceBand": "High"
+      },
+      {
+        "type": "mosaicId",
+        "value": "M-10001",
+        "confidenceBand": "High"
+      },
+      {
+        "type": "synergyId",
+        "value": "S-1234567",
+        "confidenceBand": "High"
+      }
+    ],
+    "communications": [],
+    "conflicts": []
+  },
+  {
+    "id": "spec-case-jones-smith",
+    "entityId": "spec-case-jones-smith",
+    "name": "Jones Smith",
+    "caseId": "S-7654321",
+    "nhsNumber": "456 789 0123",
+    "dateOfBirth": "2020-03-01",
+    "relationships": [],
+    "attributes": [
+      {
+        "type": "dfeId",
+        "value": "D-20002",
+        "confidenceBand": "High"
+      },
+      {
+        "type": "mosaicId",
+        "value": "M-10002",
+        "confidenceBand": "High"
+      },
+      {
+        "type": "synergyId",
+        "value": "S-7654321",
+        "confidenceBand": "High"
+      }
+    ],
+    "communications": [],
+    "conflicts": []
+  }
+]

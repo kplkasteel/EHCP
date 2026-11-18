@@ -1,0 +1,14 @@
+{
+  "relevance": true,
+  "reliability": true,
+  "extractedChildren": [
+    {
+      "name": {{childName:json}},
+      "nhsNumber": {{nhsNumber:json}},
+      "caseId": {{caseId:json}},
+      "dateOfBirth": {{dateOfBirth:json}},
+      "relationships": [],
+      "attributes": {{attributes}}
+    }
+  ]
+}

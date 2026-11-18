@@ -32,8 +32,8 @@ public static class DocumentRules
             if ((child.Status == ChildStatus.Folded) != !string.IsNullOrWhiteSpace(child.MatchedCaseId))
                 throw new DocumentValidationException("matchedCaseId must be set exactly when status is Folded.");
             if (child.MatchedCaseId is not null) ValidateId(child.MatchedCaseId);
-            if (child.Status != ChildStatus.Conflict && child.PossibleCaseMatches.Count != 0)
-                throw new DocumentValidationException("Only Conflict results may have possibleCaseMatches.");
+            if (child.Status is not (ChildStatus.Conflict or ChildStatus.PendingMatch) && child.PossibleCaseMatches.Count != 0)
+                throw new DocumentValidationException("Only Conflict or PendingMatch results may have possibleCaseMatches.");
             foreach (PossibleCaseMatch match in child.PossibleCaseMatches)
             {
                 ValidateId(match.EntityId);

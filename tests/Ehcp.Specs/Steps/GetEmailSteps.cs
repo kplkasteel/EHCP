@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
 using Ehcp.Core;
@@ -9,7 +10,7 @@ using Xunit;
 namespace Ehcp.Specs.Steps;
 
 [Binding]
-public sealed partial class GetEmailSteps : IDisposable
+public sealed partial class GetEmailSteps
 {
     // Environment configuration, read once. Defaults target the local emulator and API.
     private static string EnvOr(string name, string fallback) => Environment.GetEnvironmentVariable(name) ?? fallback;
@@ -33,18 +34,24 @@ public sealed partial class GetEmailSteps : IDisposable
         Database = CosmosDatabase
     };
     private readonly CosmosClient _client;
-    private readonly HttpClient _http = new() { BaseAddress = new Uri(EhcpBaseUrl) };
+    // Shared across scenarios so each one reuses the open connection instead of opening a new one.
+    private static readonly HttpClient _http = new() { BaseAddress = new Uri(EhcpBaseUrl) };
     private EmailDocument? _seeded;
     private HttpResponseMessage? _response;
     private readonly Dictionary<string, string> _caseIds = new(StringComparer.Ordinal);
+    private readonly IReqnrollOutputHelper _output;
 
-    public GetEmailSteps()
+    // One client for the whole test run: creating a client per scenario repeats account metadata and TLS setup.
+    private static readonly Lazy<CosmosClient> SharedCosmosClient = new(() => new CosmosClient(CosmosEndpoint, CosmosKey, new CosmosClientOptions
     {
-        _client = new CosmosClient(_settings.Endpoint, _settings.Key, new CosmosClientOptions
-        {
-            ConnectionMode = ConnectionMode.Gateway,
-            UseSystemTextJsonSerializerWithOptions = CosmosDocumentStore<EmailDocument>.JsonOptions
-        });
+        ConnectionMode = ConnectionMode.Gateway,
+        UseSystemTextJsonSerializerWithOptions = CosmosDocumentStore<EmailDocument>.JsonOptions
+    }));
+
+    public GetEmailSteps(IReqnrollOutputHelper output)
+    {
+        _output = output;
+        _client = SharedCosmosClient.Value;
     }
 
     [Given("the mailbox {string} is selected")]
@@ -77,8 +84,12 @@ public sealed partial class GetEmailSteps : IDisposable
 
 
     [When(@"a request is made to the \/mailbox\/{string}\/emails\/{string} endpoint")]
-    public async Task WhenARequestIsMadeToTheEmailsEndpoint(string mailbox, string emailId) =>
+    public async Task WhenARequestIsMadeToTheEmailsEndpoint(string mailbox, string emailId)
+    {
+        var timer = Stopwatch.StartNew();
         _response = await _http.GetAsync($"/api/mailboxes/{Uri.EscapeDataString(mailbox)}/emails/{Uri.EscapeDataString(emailId)}");
+        _output.WriteLine($"[API GET] {timer.ElapsedMilliseconds} ms, status {(int)_response.StatusCode}");
+    }
 
     [Then("the email record should be retrieved with processing status {string}")]
     public async Task ThenTheEmailRecordShouldBeRetrieved(string status)
@@ -99,10 +110,5 @@ public sealed partial class GetEmailSteps : IDisposable
         Assert.Equal(HttpStatusCode.NotFound, _response.StatusCode);
     }
 
-    public void Dispose()
-    {
-        _http.Dispose();
-        _client.Dispose();
-    }
 }
 

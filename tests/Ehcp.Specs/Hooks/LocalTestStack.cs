@@ -123,6 +123,8 @@ internal static class LocalTestStack
             ["FUNCTIONS_WORKER_RUNTIME"] = "dotnet-isolated",
             ["AzureWebJobsStorage"] = "UseDevelopmentStorage=true",
             ["ProcessingQueueName"] = queueName,
+            // Test-only: host.json keeps the 2 s production poll ceiling. Shorter polling cuts per-scenario wait.
+            ["AzureFunctionsJobHost__extensions__queues__maxPollingInterval"] = "00:00:00.250",
             ["Cosmos__Endpoint"] = "https://localhost:8081",
             ["Cosmos__Database"] = DatabaseName,
             ["Cosmos__Initialize"] = "true",

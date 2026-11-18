@@ -32,6 +32,8 @@ public interface IEmailEntityExtractionService
 public interface ICaseLookup
 {
     Task<IReadOnlyList<CaseDocument>> FindCandidatesAsync(string mailboxId, ExtractedChild child, CancellationToken ct);
+    Task<IReadOnlyList<CaseDocument>> FindDateOfBirthCandidatesAsync(string mailboxId, DateOnly dateOfBirth, CancellationToken ct);
+    Task<IReadOnlyList<CaseDocument>> FindNameCandidatesAsync(string mailboxId, string name, CancellationToken ct);
 }
 
 public interface IMatchingService
