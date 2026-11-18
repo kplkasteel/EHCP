@@ -14,6 +14,8 @@ namespace Ehcp.Specs.Steps;
 //   {{attributes}}         JSON array of non-typed identifiers with confidenceBand (ai-extract input)
 //   {{expectedAttributes}} JSON array of non-typed identifiers with type and value only (expected output)
 //   {{expectedMatches}}    exact ordered array, supplied as id:ConfidenceBand:score in Examples
+//   {{childRelationships}}    extracted child's Parent from childParentName / childParentEmail (ai-extract input); [] when blank
+//   {{expectedRelationships}} the same Parent as the API returns it (expected output); [] when blank
 public sealed partial class GetEmailSteps
 {
     private const string GraphMessageIdPrefix = "AAMkAGE1-spec-";
@@ -45,6 +47,8 @@ public sealed partial class GetEmailSteps
             ?? throw new InvalidOperationException("Set 'the child identifiers are' before using dataset templates.");
         Dictionary<string, string?> tokens = BuildTokens(identifiers);
         Dictionary<string, string> fragments = BuildFragments(identifiers);
+        fragments["childRelationships"] = BuildChildRelationships(expected: false);
+        fragments["expectedRelationships"] = BuildChildRelationships(expected: true);
         if (_scenarioValues.TryGetValue("expectedMatches", out string? expectedMatches))
             fragments["expectedMatches"] = BuildExpectedMatches(expectedMatches);
         else if (text.Contains("{{expectedMatches}}", StringComparison.Ordinal))
@@ -94,6 +98,20 @@ public sealed partial class GetEmailSteps
             ["expectedAttributes"] = JsonSerializer.Serialize(others
                 .Select(pair => new { type = pair.Key, value = pair.Value })),
         };
+    }
+
+    // The extracted child's Parent relationship, taken from the optional childParentName / childParentEmail
+    // scenario values. The extraction supplies no confidence band, so the API returns the default (VeryLow).
+    private string BuildChildRelationships(bool expected)
+    {
+        string name = _scenarioValues.GetValueOrDefault("childParentName", "");
+        string email = _scenarioValues.GetValueOrDefault("childParentEmail", "");
+        if (name.Length == 0 && email.Length == 0) return "[]";
+        string? emailOrNull = email.Length > 0 ? email : null;
+        return expected
+            ? JsonSerializer.Serialize(new[] { new { type = "parent", name, email = emailOrNull, phone = (string?)null,
+                confidenceBand = "VeryLow", userStatus = (string?)null, sourceEmailId = (string?)null } })
+            : JsonSerializer.Serialize(new[] { new { type = "parent", name, email = emailOrNull, phone = (string?)null } });
     }
 
     // Example syntax: case-id:Medium:10;other-id:Low:7 (blank means no matches).

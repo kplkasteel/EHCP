@@ -198,3 +198,135 @@ Feature: Retrieve email
     And we wait for the database processing status to be "Discarded"
     When a request is made to the /mailbox/"ehcp-team-shared-1"/emails/"scenario-4-out-of-office" endpoint
     Then the email record should be retrieved matching "scenario-4-out-of-office-expected-result.json"
+
+  Scenario Outline: Email with a fuzzy-matching child and matching parent lists a single low-confidence possible match
+    Given the mailbox "ehcp-team-shared-1" is selected
+    And the scenario values are
+      | key              | value              |
+      | emailId          | <emailId>          |
+      | conversationId   | <conversationId>   |
+      | parentName       | <parentName>       |
+      | parentEmail      | <parentEmail>      |
+      | childParentName  | <childParentName>  |
+      | childParentEmail | <childParentEmail> |
+      | expectedMatches  | <expectedMatches>  |
+      | expectedStatus   | <expectedStatus>   |
+      | expectedCaseId   | <expectedCaseId>   |
+    And the child identifiers are
+      | identifier  | value         |
+      | childName   | <childName>   |
+      | nhsNumber   | <nhsNumber>   |
+      | caseId      | <caseId>      |
+      | dateOfBirth | <dateOfBirth> |
+      | mosaicId    | <mosaicId>    |
+      | dfeId       | <dfeId>       |
+      | synergyId   | <synergyId>   |
+    And the database is setup to contain "scenario-7-low-match-relationships-data.json"
+    And the database contains cases "scenario-7-low-match-relationships-cases.json"
+    And we setup mock ai extraction to return dataset "scenario-7-low-match-relationships-ai-extract.json"
+    And we setup mock graph api to return dataset "scenario-7-low-match-relationships-graph-email.json"
+    When the email record "scenario-7-low-match-relationships-queue.json" is added to the queue
+    And we wait for the database processing status to be "Processed"
+    When a request is made to the /mailbox/"ehcp-team-shared-1"/emails/"<emailId>" endpoint
+    Then the email record should be retrieved matching "scenario-7-low-match-relationships-expected-result.json"
+    And the email child should have matched case id "<expectedCaseId>"
+# Seeded cases: spec-case-oliver-hughes (Oliver Hughes, DOB 2018-06-12, NHS 222 333 4445, Parent Grace Hughes, grace.hughes@example.com)
+# and spec-case-amelia-khan (Amelia Khan, DOB 2018-06-12, NHS 222 333 5556, Parent Sara Khan, sara.khan@example.com), which must not match.
+# parentName / parentEmail are the email sender. childParentName / childParentEmail are the extracted child's Parent relationship.
+# Expected matches are ordered id:ConfidenceBand:score entries separated by semicolons. Low is a score below 10.
+
+    Examples:
+      | emailId                     | conversationId  | parentName  | parentEmail             | childName | nhsNumber | caseId | dateOfBirth | mosaicId | dfeId | synergyId | childParentName | childParentEmail         | expectedStatus | expectedCaseId | expectedMatches               |
+      | spec-l-name-parent-email    | spec-thread-l01 | Sam Example | sam.example@example.com | Oli       |           |        |             |          |       |           | Grace Hughes    | grace.hughes@example.com | PendingMatch   |                | spec-case-oliver-hughes:Low:7 |
+      | spec-l-name-parent-name     | spec-thread-l02 | Sam Example | sam.example@example.com | Oliver    |           |        |             |          |       |           | Grace Hughes    | other@example.com        | PendingMatch   |                | spec-case-oliver-hughes:Low:5 |
+      | spec-l-name-parent-only     | spec-thread-l03 | Sam Example | sam.example@example.com | Oli       |           |        |             |          |       |           | Mark Hughes     | grace.hughes@example.com | PendingMatch   |                | spec-case-oliver-hughes:Low:5 |
+      | spec-l-name-initials-parent | spec-thread-l04 | Sam Example | sam.example@example.com | Oliver H  |           |        |             |          |       |           | Grace Hughes    | other@example.com        | PendingMatch   |                | spec-case-oliver-hughes:Low:5 |
+      | spec-l-name-other-parent    | spec-thread-l05 | Sam Example | sam.example@example.com | Oli       |           |        |             |          |       |           | Sara Khan       | sara.khan@example.com    | PendingMatch   |                | spec-case-oliver-hughes:Low:3 |
+
+  Scenario Outline: Email with a fuzzy-matching child whose identifier differs from the case lists a single low-confidence possible match
+    Given the mailbox "ehcp-team-shared-1" is selected
+    And the scenario values are
+      | key              | value              |
+      | emailId          | <emailId>          |
+      | conversationId   | <conversationId>   |
+      | parentName       | <parentName>       |
+      | parentEmail      | <parentEmail>      |
+      | childParentName  | <childParentName>  |
+      | childParentEmail | <childParentEmail> |
+      | expectedMatches  | <expectedMatches>  |
+      | expectedStatus   | <expectedStatus>   |
+      | expectedCaseId   | <expectedCaseId>   |
+    And the child identifiers are
+      | identifier  | value         |
+      | childName   | <childName>   |
+      | nhsNumber   | <nhsNumber>   |
+      | caseId      | <caseId>      |
+      | dateOfBirth | <dateOfBirth> |
+      | mosaicId    | <mosaicId>    |
+      | dfeId       | <dfeId>       |
+      | synergyId   | <synergyId>   |
+    And the database is setup to contain "scenario-8-low-match-identifier-mismatch-data.json"
+    And the database contains cases "scenario-8-low-match-identifier-mismatch-cases.json"
+    And we setup mock ai extraction to return dataset "scenario-8-low-match-identifier-mismatch-ai-extract.json"
+    And we setup mock graph api to return dataset "scenario-8-low-match-identifier-mismatch-graph-email.json"
+    When the email record "scenario-8-low-match-identifier-mismatch-queue.json" is added to the queue
+    And we wait for the database processing status to be "Processed"
+    When a request is made to the /mailbox/"ehcp-team-shared-1"/emails/"<emailId>" endpoint
+    Then the email record should be retrieved matching "scenario-8-low-match-identifier-mismatch-expected-result.json"
+    And the email child should have matched case id "<expectedCaseId>"
+# Seeded cases: spec-case-isla-patel (Isla Patel, DOB 2017-09-23, NHS 333 444 5556, Synergy S-3334445, DfE D-40001, Mosaic M-30001,
+# Parent Raj Patel, raj.patel@example.com) and spec-case-ivy-chen (Ivy Chen, DOB 2017-09-23, NHS 333 444 6667, Parent Lin Chen), which must not match.
+# Each row gives the child one identifier that matches no case. Today this creates a new case: PendingMatch needs PO confirmation and a code change.
+# Expected matches are ordered id:ConfidenceBand:score entries separated by semicolons. Low is a score below 10.
+
+    Examples:
+      | emailId                | conversationId  | parentName  | parentEmail             | childName | nhsNumber    | caseId    | dateOfBirth | mosaicId | dfeId   | synergyId | childParentName | childParentEmail      | expectedStatus | expectedCaseId | expectedMatches            |
+      | spec-l-diff-nhs        | spec-thread-l06 | Sam Example | sam.example@example.com | Isla      | 999 888 7776 |           |             |          |         |           | Raj Patel       | raj.patel@example.com | PendingMatch   |                | spec-case-isla-patel:Low:7 |
+      | spec-l-diff-mosaic     | spec-thread-l07 | Sam Example | sam.example@example.com | Isla      |              |           |             | M-39999  |         |           | Raj Patel       | raj.patel@example.com | PendingMatch   |                | spec-case-isla-patel:Low:7 |
+      | spec-l-diff-dfe        | spec-thread-l08 | Sam Example | sam.example@example.com | Isla      |              |           |             |          | D-49999 |           | Raj Patel       | raj.patel@example.com | PendingMatch   |                | spec-case-isla-patel:Low:7 |
+      | spec-l-diff-synergy    | spec-thread-l09 | Sam Example | sam.example@example.com | Isla      |              |           |             |          |         | S-3999999 | Raj Patel       | raj.patel@example.com | PendingMatch   |                | spec-case-isla-patel:Low:7 |
+      | spec-l-diff-caseid     | spec-thread-l10 | Sam Example | sam.example@example.com | Isla      |              | S-3999999 |             |          |         |           | Raj Patel       | raj.patel@example.com | PendingMatch   |                | spec-case-isla-patel:Low:7 |
+      | spec-l-diff-nhs-parent | spec-thread-l11 | Sam Example | sam.example@example.com | Isla      | 999 888 7776 |           |             |          |         |           | Raj Patel       | other@example.com     | PendingMatch   |                | spec-case-isla-patel:Low:5 |
+
+  Scenario Outline: Email with a child matching only on date of birth lists a single low-confidence possible match
+    Given the mailbox "ehcp-team-shared-1" is selected
+    And the scenario values are
+      | key              | value              |
+      | emailId          | <emailId>          |
+      | conversationId   | <conversationId>   |
+      | parentName       | <parentName>       |
+      | parentEmail      | <parentEmail>      |
+      | childParentName  | <childParentName>  |
+      | childParentEmail | <childParentEmail> |
+      | expectedMatches  | <expectedMatches>  |
+      | expectedStatus   | <expectedStatus>   |
+      | expectedCaseId   | <expectedCaseId>   |
+    And the child identifiers are
+      | identifier  | value         |
+      | childName   | <childName>   |
+      | nhsNumber   | <nhsNumber>   |
+      | caseId      | <caseId>      |
+      | dateOfBirth | <dateOfBirth> |
+      | mosaicId    | <mosaicId>    |
+      | dfeId       | <dfeId>       |
+      | synergyId   | <synergyId>   |
+    And the database is setup to contain "scenario-9-low-match-dob-data.json"
+    And the database contains cases "scenario-9-low-match-dob-cases.json"
+    And we setup mock ai extraction to return dataset "scenario-9-low-match-dob-ai-extract.json"
+    And we setup mock graph api to return dataset "scenario-9-low-match-dob-graph-email.json"
+    When the email record "scenario-9-low-match-dob-queue.json" is added to the queue
+    And we wait for the database processing status to be "Processed"
+    When a request is made to the /mailbox/"ehcp-team-shared-1"/emails/"<emailId>" endpoint
+    Then the email record should be retrieved matching "scenario-9-low-match-dob-expected-result.json"
+    And the email child should have matched case id "<expectedCaseId>"
+# Seeded cases: spec-case-noah-williams (Noah Williams, DOB 2019-05-05, NHS 444 555 6667, Parent Emma Williams, emma.williams@example.com)
+# and spec-case-zara-ahmed (Zara Ahmed, DOB 2016-01-20, NHS 444 555 7778, Parent Omar Ahmed), which must not match.
+# Leave childParentName / childParentEmail blank for no extracted relationships.
+# Expected matches are ordered id:ConfidenceBand:score entries separated by semicolons. Low is a score below 10.
+
+    Examples:
+      | emailId                 | conversationId  | parentName  | parentEmail             | childName | nhsNumber | caseId | dateOfBirth | mosaicId | dfeId | synergyId | childParentName | childParentEmail          | expectedStatus | expectedCaseId | expectedMatches               |
+      | spec-l-dob-other-name   | spec-thread-l12 | Sam Example | sam.example@example.com | Leo       |           |        |  2019-05-05 |          |       |           |                 |                           | PendingMatch   |                | spec-case-noah-williams:Low:7 |
+      | spec-l-dob-no-name      | spec-thread-l13 | Sam Example | sam.example@example.com |           |           |        |  2019-05-05 |          |       |           |                 |                           | PendingMatch   |                | spec-case-noah-williams:Low:7 |
+      | spec-l-dob-parent-email | spec-thread-l14 | Sam Example | sam.example@example.com | Leo       |           |        |  2019-05-05 |          |       |           | Kate Brown      | emma.williams@example.com | PendingMatch   |                | spec-case-noah-williams:Low:9 |
+      | spec-l-dob-parent-name  | spec-thread-l15 | Sam Example | sam.example@example.com | Leo       |           |        |  2019-05-05 |          |       |           | Emma Williams   | other@example.com         | PendingMatch   |                | spec-case-noah-williams:Low:9 |

@@ -1,0 +1,51 @@
+[
+  {
+    "id": "spec-case-noah-williams",
+    "entityId": "spec-case-noah-williams",
+    "name": "Noah Williams",
+    "caseId": "S-4445556",
+    "nhsNumber": "444 555 6667",
+    "dateOfBirth": "2019-05-05",
+    "relationships": [
+      {
+        "type": "Parent",
+        "name": "Emma Williams",
+        "email": "emma.williams@example.com",
+        "phone": null,
+        "confidenceBand": "High"
+      }
+    ],
+    "attributes": [
+      { "type": "dfeId", "value": "D-50001", "confidenceBand": "High" },
+      { "type": "mosaicId", "value": "M-40001", "confidenceBand": "High" },
+      { "type": "synergyId", "value": "S-4445556", "confidenceBand": "High" }
+    ],
+    "communications": [],
+    "conflicts": []
+  }
+  ,
+  {
+    "id": "spec-case-zara-ahmed",
+    "entityId": "spec-case-zara-ahmed",
+    "name": "Zara Ahmed",
+    "caseId": "S-4445557",
+    "nhsNumber": "444 555 7778",
+    "dateOfBirth": "2016-01-20",
+    "relationships": [
+      {
+        "type": "Parent",
+        "name": "Omar Ahmed",
+        "email": "omar.ahmed@example.com",
+        "phone": null,
+        "confidenceBand": "High"
+      }
+    ],
+    "attributes": [
+      { "type": "dfeId", "value": "D-50002", "confidenceBand": "High" },
+      { "type": "mosaicId", "value": "M-40002", "confidenceBand": "High" },
+      { "type": "synergyId", "value": "S-4445557", "confidenceBand": "High" }
+    ],
+    "communications": [],
+    "conflicts": []
+  }
+]
