@@ -8,6 +8,8 @@
     "Cosmos__Key": "set-from-your-local-emulator",
     "Processing__Graph__BaseUrl": "http://localhost:7101",
     "Processing__Graph__Mailboxes__ehcp-team-shared-1": "ehcp-team-shared-1@example.com",
-    "Processing__Extraction__Endpoint": "http://localhost:7102/api/extract"
+    "Processing__Extraction__Endpoint": "http://localhost:7102/api/extract",
+    "EHCP_SEQ_ENABLED": "true",
+    "EHCP_SEQ_URL": "http://localhost:5341"
   }
 }

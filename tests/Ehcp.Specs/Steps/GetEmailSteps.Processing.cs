@@ -49,6 +49,8 @@ public sealed partial class GetEmailSteps
     [Given("the database is setup to contain {string}")]
     public async Task GivenTheDatabaseIsSetupToContainDataset(string dataset)
     {
+        WriteScenarioInputs();
+        await WriteDatasetAsync("DB EMAILS SETUP", dataset);
         EmailDocument[] documents = await ReadDatasetAsync<EmailDocument[]>(dataset);
         var store = new CosmosDocumentStore<EmailDocument>(_client, _settings);
         foreach (EmailDocument document in documents)
@@ -61,6 +63,7 @@ public sealed partial class GetEmailSteps
     [Given("the database contains cases {string}")]
     public async Task GivenTheDatabaseContainsCases(string dataset)
     {
+        await WriteDatasetAsync("DB CASES SETUP", dataset);
         CaseDocument[] documents = await ReadDatasetAsync<CaseDocument[]>(dataset);
         var store = new CosmosDocumentStore<CaseDocument>(_client, _settings);
         foreach (CaseDocument document in documents)
@@ -70,6 +73,7 @@ public sealed partial class GetEmailSteps
     [Given("we setup mock ai extraction to return dataset {string}")]
     public async Task GivenWeSetupMockAiExtractionToReturnDataset(string dataset)
     {
+        await WriteDatasetAsync("AI EXTRACTION SETUP", dataset);
         AiExtractDatasetFile file = await ReadDatasetAsync<AiExtractDatasetFile>(dataset);
         _pendingExtraction = new EmailExtraction(
             file.ExtractedChildren, Relevance: file.Relevance, Rationale: file.Rationale);
@@ -172,6 +176,7 @@ public sealed partial class GetEmailSteps
         JsonArray expectedChildren = expected["children"]!.AsArray();
         JsonArray actualChildren = actual["children"]!.AsArray();
         Assert.Equal(expectedChildren.Count, actualChildren.Count);
+        List<string> matchReport = WriteMatchReport(expectedChildren, actualChildren);
         for (int i = 0; i < expectedChildren.Count; i++)
         {
             JsonNode? expectedId = expectedChildren[i]?["matchedCaseId"];
@@ -192,6 +197,7 @@ public sealed partial class GetEmailSteps
 
         Assert.True(JsonNode.DeepEquals(expected, actual),
             $"Response did not match '{dataset}'.\n" +
+            string.Join("\n", matchReport) + "\n" +
             $"Expected:\n{expected.ToJsonString(options)}\n" +
             $"Actual:\n{actual.ToJsonString(options)}");
     }
@@ -240,13 +246,16 @@ public sealed partial class GetEmailSteps
     }
 
     [AfterScenario]
-    public async Task RemoveScenarioDocuments()
+    public async Task RemoveScenarioDocuments(ScenarioContext scenario)
     {
         if (_settings.Database != LocalTestStack.DatabaseName || string.IsNullOrEmpty(LocalTestStack.DatabaseName))
             throw new InvalidOperationException("Refusing to clean up a database not owned by this test run.");
 
+        // A passing scenario has already waited for its final status, so the host is idle and stays running.
+        // A failed scenario may leave a message in flight, so the host is restarted to stop it.
         bool processingWasStarted = _processingEmailId is not null;
-        if (processingWasStarted) LocalTestStack.StopProcessing();
+        bool restartProcessing = processingWasStarted && scenario.TestError is not null;
+        if (restartProcessing) LocalTestStack.StopProcessing();
 
         if (processingWasStarted)
         {
@@ -260,7 +269,7 @@ public sealed partial class GetEmailSteps
             await RemoveDocumentsAsync(mailbox.CasesContainer, "entityId");
         }
 
-        if (processingWasStarted) await LocalTestStack.StartProcessingAsync();
+        if (restartProcessing) await LocalTestStack.StartProcessingAsync();
     }
 
     private static async Task ClearQueueAsync(string name)

@@ -39,6 +39,26 @@ public sealed class CosmosCaseLookup(CosmosClient client, CosmosSettings setting
         return await QueryAsync(mailboxId, query, ct);
     }
 
+    // Broaden candidate discovery when extraction provides a name but no DOB.
+    // The three-character prefix is a coarse database prefilter; the application
+    // scorer decides whether a retrieved name is actually a possible match.
+    public async Task<IReadOnlyList<CaseDocument>> FindNameCandidatesAsync(
+        string mailboxId, string name, CancellationToken ct)
+    {
+        string normalized = Normalize(name);
+        if (normalized.Length == 0) return [];
+        string firstName = normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0];
+        string prefix = firstName[..Math.Min(3, firstName.Length)];
+        QueryDefinition query = new QueryDefinition("""
+            SELECT * FROM c WHERE
+              UPPER(TRIM(c.name)) = @name
+              OR STARTSWITH(UPPER(TRIM(c.name)), @prefix)
+            """)
+            .WithParameter("@name", normalized)
+            .WithParameter("@prefix", prefix);
+        return await QueryAsync(mailboxId, query, ct);
+    }
+
     private async Task<IReadOnlyList<CaseDocument>> QueryAsync(
         string mailboxId, QueryDefinition query, CancellationToken ct)
     {

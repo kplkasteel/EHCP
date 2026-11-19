@@ -6,8 +6,9 @@
   <ItemGroup>
     <ProjectReference Include="../Ehcp.Application/Ehcp.Application.csproj" />
     <ProjectReference Include="../Ehcp.Infrastructure/Ehcp.Infrastructure.csproj" />
-    <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="2.51.0" />
-    <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="2.0.5" />
+    <ProjectReference Include="../Ehcp.Logging/Ehcp.Logging.csproj" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="2.52.0" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="2.1.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Storage.Queues" Version="5.5.5" />
   </ItemGroup>
   <ItemGroup>

@@ -2,12 +2,14 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Ehcp.Core;
+using Microsoft.Extensions.Logging;
 
 namespace Ehcp.Application;
 
 public sealed class MatchingService(
     ICaseLookup lookup,
-    IDocumentStore<CaseDocument> cases) : IMatchingService
+    IDocumentStore<CaseDocument> cases,
+    ILogger<MatchingService> logger) : IMatchingService
 {
     public async Task<ChildResult> MatchAsync(
         string mailboxId,
@@ -203,17 +205,35 @@ public sealed class MatchingService(
     private async Task<IReadOnlyList<PossibleCaseMatch>> FindPossibleMatchesAsync(
         string mailboxId, ExtractedChild child, CancellationToken ct)
     {
-        if (child.DateOfBirth is not DateOnly dateOfBirth)
-        {
+        if (child.DateOfBirth is null && string.IsNullOrWhiteSpace(child.Name))
             return [];
+
+        var tasks = new List<Task<IReadOnlyList<CaseDocument>>>();
+
+        if (child.DateOfBirth is DateOnly dob)
+        {
+            tasks.Add(lookup.FindDateOfBirthCandidatesAsync(mailboxId, dob, ct));
         }
 
-        IReadOnlyList<CaseDocument> candidates =
-            await lookup.FindDateOfBirthCandidatesAsync(mailboxId, dateOfBirth, ct);
+        if (!string.IsNullOrWhiteSpace(child.Name))
+        {
+            tasks.Add(lookup.FindNameCandidatesAsync(mailboxId, child.Name, ct));
+        }
+
+        var candidates = (await Task.WhenAll(tasks))
+            .SelectMany(x => x)
+            .DistinctBy(x => x.EntityId)
+            .ToArray();
+
+
+        logger.LogInformation(
+            $"Found {candidates.Length} possible matches for {mailboxId} child {child.Name} ({child.DateOfBirth})");
 
         return candidates
             .Select(candidate => PossibleMatchScorer.Score(child, candidate))
+            .Where(match => match.Score > 0)
             .OrderByDescending(match => match.Score)
+            .ThenBy(match => match.EntityId, StringComparer.Ordinal)
             .ToArray();
     }
 
@@ -243,6 +263,7 @@ public sealed class MatchingService(
             possibleMatches ?? candidates?
                 .Select(candidate => PossibleMatchScorer.Score(child, candidate))
                 .OrderByDescending(match => match.Score)
+                .ThenBy(match => match.EntityId, StringComparer.Ordinal)
                 .ToArray() ?? [],
             [
                 .. child.Relationships
