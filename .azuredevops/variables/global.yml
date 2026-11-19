@@ -1,0 +1,13 @@
+# Tool versions shared by every pipeline in this repository.
+# Referenced with:  variables:
+#                     - template: variables/global.yml
+#
+# The .NET SDK version is NOT set here. It is maintained in global.json at the repository root,
+# and the "Install .NET SDK from global.json" step (UseDotNet@2 with useGlobalJson) installs it.
+# To change the .NET SDK, edit global.json, not this file.
+
+variables:
+  rubyVersion: '4.0.x'
+  nodeVersion: '24.x'
+  azuriteVersion: '3.37'
+  funcVersion: '4.16'

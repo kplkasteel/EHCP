@@ -1,0 +1,46 @@
+trigger: none
+
+pool:
+  vmImage: windows-latest
+
+variables:
+  - template: variables/global.yml
+
+steps:
+  - powershell: |
+      Write-Host "Build:            $(Build.BuildId)"
+      Write-Host "Agent name:       $(Agent.Name)"
+      Write-Host "Agent id:         $(Agent.Id)"
+      Write-Host "Agent machine:    $(Agent.MachineName)"
+      Write-Host "Computer name:    $env:COMPUTERNAME"
+      Write-Host "VM UUID:          $((Get-CimInstance Win32_ComputerSystemProduct).UUID)"
+      Write-Host "Image:            $env:ImageOS $env:ImageVersion"
+      Write-Host "Started (UTC):    $((Get-Date).ToUniversalTime().ToString('s'))"
+    displayName: Show runner identity
+
+  - template: templates/install-tools.yml
+    parameters:
+      rubyVersion: ${{ variables.rubyVersion }}
+      nodeVersion: ${{ variables.nodeVersion }}
+      azuriteVersion: ${{ variables.azuriteVersion }}
+      funcVersion: ${{ variables.funcVersion }}
+
+  - script: rake go
+    displayName: Rake go (build, unit tests, specs)
+    timeoutInMinutes: 30
+
+  - task: PublishTestResults@2
+    condition: always()
+    inputs:
+      testResultsFormat: VSTest
+      testResultsFiles: '**/TestResults/*.trx'
+      failTaskOnFailedTests: false
+    displayName: Publish test results
+
+  - task: PublishPipelineArtifact@1
+    condition: always()
+    continueOnError: true
+    inputs:
+      targetPath: tests/Ehcp.Specs/TestResults
+      artifact: specs-results-and-logs
+    displayName: Publish spec results and host logs
