@@ -172,6 +172,8 @@ public sealed partial class GetEmailSteps
         Assert.NotNull(actual);
         Assert.NotNull(expected);
         AssertSameReceivedDateTime(expected, actual);
+        _output.WriteLine($"[EXPECTED RESULT] {dataset}");
+        _output.WriteLine(expected.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
 
         JsonArray expectedChildren = expected["children"]!.AsArray();
         JsonArray actualChildren = actual["children"]!.AsArray();

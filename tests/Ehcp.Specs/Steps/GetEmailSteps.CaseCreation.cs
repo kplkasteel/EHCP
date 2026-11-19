@@ -151,6 +151,12 @@ public sealed partial class GetEmailSteps
             throw new InvalidOperationException($"Expected exactly one child, found {children.GetArrayLength()}.");
         JsonElement actual = children[0].GetProperty("matchedCaseId");
         string? actualId = actual.ValueKind == JsonValueKind.Null ? null : actual.GetString();
+        const string createdCase = "created";
+        if (expectedCaseId == createdCase)
+        {
+            Xunit.Assert.False(string.IsNullOrWhiteSpace(actualId), "Expected a newly created case ID.");
+            return;
+        }
         Xunit.Assert.Equal(string.IsNullOrWhiteSpace(expectedCaseId) ? null : expectedCaseId, actualId);
     }
 

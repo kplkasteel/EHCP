@@ -35,7 +35,7 @@ Feature: Retrieve email
     Then the email record should be retrieved matching "scenario-1-single-child-expected-result.json"
 
 
-  Scenario Outline: Email with a fuzzy-matching child lists scored possible case matches
+  Scenario Outline: Email with a fuzzy-matching child folds on a Medium or High score and lists Low possible matches
     Given the mailbox "ehcp-team-shared-1" is selected
     And the scenario values are
       | key             | value             |
@@ -44,6 +44,8 @@ Feature: Retrieve email
       | parentName      | <parentName>      |
       | parentEmail     | <parentEmail>     |
       | expectedMatches | <expectedMatches> |
+      | expectedStatus  | <expectedStatus>  |
+      | expectedCaseId  | <expectedCaseId>  |
     And the child identifiers are
       | identifier  | value         |
       | childName   | <childName>   |
@@ -63,33 +65,37 @@ Feature: Retrieve email
     Then the email record should be retrieved matching "scenario-5-fuzzy-name-possible-matches-expected-result.json"
 # Expected matches are ordered id:ConfidenceBand:score entries separated by semicolons.
 # Leave expectedMatches blank to assert an empty possibleCaseMatches array.
-# Only no-strong-ID rows can remain PendingMatch. Strong-ID rows fold or conflict.
+# A Medium or High candidate (score 10 or more) folds the email into that case: Folded, expectedCaseId set, expectedMatches blank.
+# Low candidates (score below 10) keep the email PendingMatch and list them.
+# No candidate and no strong ID keeps the email PendingMatch with no possible matches.
+# Strong-ID rows are covered by the strong identifier scenario below.
+
 
     Examples:
-      | emailId                                | conversationId  | parentName  | parentEmail             | childName     | nhsNumber | dateOfBirth | mosaicId | dfeId | synergyId | caseId | expectedMatches                                             |
-      | scenario-5-fuzzy-name-possible-matches | spec-thread-005 | Sam Example | sam.example@example.com | Freddy        |           |  2020-03-01 |          |       |           |        | spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7 |
-      | spec-f-fredd-dob                       | spec-thread-f01 | Sam Example | sam.example@example.com | Fredd         |           |  2020-03-01 |          |       |           |        | spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7 |
-      | spec-f-fred-dob                        | spec-thread-f02 | Sam Example | sam.example@example.com | Fred          |           |  2020-03-01 |          |       |           |        | spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7 |
-      | spec-f-frederick-dob                   | spec-thread-f03 | Sam Example | sam.example@example.com | Frederick     |           |  2020-03-01 |          |       |           |        | spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7 |
-      | spec-f-jones-dob                       | spec-thread-f04 | Sam Example | sam.example@example.com | Jones         |           |  2020-03-01 |          |       |           |        | spec-case-jones-smith:Medium:10;spec-case-fred-bloggs:Low:7 |
-      | spec-f-other-name-dob                  | spec-thread-f05 | Sam Example | sam.example@example.com | Martha        |           |  2020-03-01 |          |       |           |        | spec-case-fred-bloggs:Low:7;spec-case-jones-smith:Low:7     |
-      | spec-f-dob-only                        | spec-thread-f06 | Sam Example | sam.example@example.com |               |           |  2020-03-01 |          |       |           |        | spec-case-fred-bloggs:Low:7;spec-case-jones-smith:Low:7     |
-      | spec-f-fred-initial-dob                | spec-thread-f07 | Sam Example | sam.example@example.com | F. Bloggs     |           |  2020-03-01 |          |       |           |        | spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7 |
-      | spec-f-jones-initial-dob               | spec-thread-f08 | Sam Example | sam.example@example.com | J. Smith      |           |  2020-03-01 |          |       |           |        | spec-case-jones-smith:Medium:10;spec-case-fred-bloggs:Low:7 |
-      | spec-f-fuzzy-name-only                 | spec-thread-f09 | Sam Example | sam.example@example.com | Freddy        |           |             |          |       |           |        | spec-case-fred-bloggs:Low:3                                 |
-      | spec-f-fredd-name-only                 | spec-thread-f10 | Sam Example | sam.example@example.com | Fredd         |           |             |          |       |           |        | spec-case-fred-bloggs:Low:3                                 |
-      | spec-f-jones-name-only                 | spec-thread-f11 | Sam Example | sam.example@example.com | Jones         |           |             |          |       |           |        | spec-case-jones-smith:Low:3                                 |
-      | spec-f-full-name-only                  | spec-thread-f12 | Sam Example | sam.example@example.com | Fred Bloggs   |           |             |          |       |           |        | spec-case-fred-bloggs:Low:5                                 |
-      | spec-f-jones-full-only                 | spec-thread-f13 | Sam Example | sam.example@example.com | Jones Smith   |           |             |          |       |           |        | spec-case-jones-smith:Low:5                                 |
-      | spec-f-exact-fred-dob                  | spec-thread-f14 | Sam Example | sam.example@example.com | Fred Bloggs   |           |  2020-03-01 |          |       |           |        | spec-case-fred-bloggs:Medium:12;spec-case-jones-smith:Low:7 |
-      | spec-f-exact-jones-dob                 | spec-thread-f15 | Sam Example | sam.example@example.com | Jones Smith   |           |  2020-03-01 |          |       |           |        | spec-case-jones-smith:Medium:12;spec-case-fred-bloggs:Low:7 |
-      | spec-f-no-evidence                     | spec-thread-f16 | Sam Example | sam.example@example.com |               |           |             |          |       |           |        |                                                             |
-      | spec-f-different-dob                   | spec-thread-f17 | Sam Example | sam.example@example.com | Fredster      |           |  2021-03-01 |          |       |           |        | spec-case-fred-bloggs:Low:3                                 |
-      | spec-f-full-lowercase-only             | spec-thread-f18 | Sam Example | sam.example@example.com | fReD bLoGgS   |           |             |          |       |           |        | spec-case-fred-bloggs:Low:5                                 |
-      | spec-f-full-lowercase-dob              | spec-thread-f19 | Sam Example | sam.example@example.com | fReD bLoGgS   |           |  2020-03-01 |          |       |           |        | spec-case-fred-bloggs:Medium:12;spec-case-jones-smith:Low:7 |
-      | spec-f-different-surname-dob           | spec-thread-f20 | Sam Example | sam.example@example.com | Fred Harper   |           |  2020-03-01 |          |       |           |        | spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7 |
-      | spec-f-fuzzy-first-name-dob            | spec-thread-f21 | Sam Example | sam.example@example.com | Freddy Bloggs |           |  2020-03-01 |          |       |           |        | spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7 |
-      | spec-f-different-name-different-dob    | spec-thread-f22 | Sam Example | sam.example@example.com | Tom           |           |  2019-03-01 |          |       |           |        |                                                             |
+      | emailId                                | conversationId  | parentName  | parentEmail             | childName     | nhsNumber | dateOfBirth | mosaicId | dfeId | synergyId | caseId | expectedMatches                                         | expectedStatus | expectedCaseId        |
+      | scenario-5-fuzzy-name-possible-matches | spec-thread-005 | Sam Example | sam.example@example.com | Freddy        |           | 2020-03-01  |          |       |           |        |                                                         | Folded         | spec-case-fred-bloggs |
+      | spec-f-fredd-dob                       | spec-thread-f01 | Sam Example | sam.example@example.com | Fredd         |           | 2020-03-01  |          |       |           |        |                                                         | Folded         | spec-case-fred-bloggs |
+      | spec-f-fred-dob                        | spec-thread-f02 | Sam Example | sam.example@example.com | Fred          |           | 2020-03-01  |          |       |           |        |                                                         | Folded         | spec-case-fred-bloggs |
+      | spec-f-frederick-dob                   | spec-thread-f03 | Sam Example | sam.example@example.com | Frederick     |           | 2020-03-01  |          |       |           |        |                                                         | Folded         | spec-case-fred-bloggs |
+      | spec-f-jones-dob                       | spec-thread-f04 | Sam Example | sam.example@example.com | Jones         |           | 2020-03-01  |          |       |           |        |                                                         | Folded         | spec-case-jones-smith |
+      | spec-f-other-name-dob                  | spec-thread-f05 | Sam Example | sam.example@example.com | Martha        |           | 2020-03-01  |          |       |           |        | spec-case-fred-bloggs:Low:7;spec-case-jones-smith:Low:7 | PendingMatch   |                       |
+      | spec-f-dob-only                        | spec-thread-f06 | Sam Example | sam.example@example.com |               |           | 2020-03-01  |          |       |           |        | spec-case-fred-bloggs:Low:7;spec-case-jones-smith:Low:7 | PendingMatch   |                       |
+      | spec-f-fred-initial-dob                | spec-thread-f07 | Sam Example | sam.example@example.com | F. Bloggs     |           | 2020-03-01  |          |       |           |        |                                                         | Folded         | spec-case-fred-bloggs |
+      | spec-f-jones-initial-dob               | spec-thread-f08 | Sam Example | sam.example@example.com | J. Smith      |           | 2020-03-01  |          |       |           |        |                                                         | Folded         | spec-case-jones-smith |
+      | spec-f-fuzzy-name-only                 | spec-thread-f09 | Sam Example | sam.example@example.com | Freddy        |           |             |          |       |           |        | spec-case-fred-bloggs:Low:3                             | PendingMatch   |                       |
+      | spec-f-fredd-name-only                 | spec-thread-f10 | Sam Example | sam.example@example.com | Fredd         |           |             |          |       |           |        | spec-case-fred-bloggs:Low:3                             | PendingMatch   |                       |
+      | spec-f-jones-name-only                 | spec-thread-f11 | Sam Example | sam.example@example.com | Jones         |           |             |          |       |           |        | spec-case-jones-smith:Low:3                             | PendingMatch   |                       |
+      | spec-f-full-name-only                  | spec-thread-f12 | Sam Example | sam.example@example.com | Fred Bloggs   |           |             |          |       |           |        | spec-case-fred-bloggs:Low:5                             | PendingMatch   |                       |
+      | spec-f-jones-full-only                 | spec-thread-f13 | Sam Example | sam.example@example.com | Jones Smith   |           |             |          |       |           |        | spec-case-jones-smith:Low:5                             | PendingMatch   |                       |
+      | spec-f-exact-fred-dob                  | spec-thread-f14 | Sam Example | sam.example@example.com | Fred Bloggs   |           | 2020-03-01  |          |       |           |        |                                                         | Folded         | spec-case-fred-bloggs |
+      | spec-f-exact-jones-dob                 | spec-thread-f15 | Sam Example | sam.example@example.com | Jones Smith   |           | 2020-03-01  |          |       |           |        |                                                         | Folded         | spec-case-jones-smith |
+      | spec-f-no-evidence                     | spec-thread-f16 | Sam Example | sam.example@example.com |               |           |             |          |       |           |        |                                                         | PendingMatch   |                       |
+      | spec-f-different-dob                   | spec-thread-f17 | Sam Example | sam.example@example.com | Fredster      |           | 2021-03-01  |          |       |           |        | spec-case-fred-bloggs:Low:3                             | PendingMatch   |                       |
+      | spec-f-full-lowercase-only             | spec-thread-f18 | Sam Example | sam.example@example.com | fReD bLoGgS   |           |             |          |       |           |        | spec-case-fred-bloggs:Low:5                             | PendingMatch   |                       |
+      | spec-f-full-lowercase-dob              | spec-thread-f19 | Sam Example | sam.example@example.com | fReD bLoGgS   |           | 2020-03-01  |          |       |           |        |                                                         | Folded         | spec-case-fred-bloggs |
+      | spec-f-different-surname-dob           | spec-thread-f20 | Sam Example | sam.example@example.com | Fred Harper   |           | 2020-03-01  |          |       |           |        |                                                         | Folded         | spec-case-fred-bloggs |
+      | spec-f-fuzzy-first-name-dob            | spec-thread-f21 | Sam Example | sam.example@example.com | Freddy Bloggs |           | 2020-03-01  |          |       |           |        |                                                         | Folded         | spec-case-fred-bloggs |
+      | spec-f-different-name-different-dob    | spec-thread-f22 | Sam Example | sam.example@example.com | Tom           |           | 2019-03-01  |          |       |           |        |                                                         | PendingMatch   |                       |
 
   Scenario Outline: Strong identifier matching folds a case or returns scored conflicts
     Given the mailbox "ehcp-team-shared-1" is selected
@@ -122,7 +128,8 @@ Feature: Retrieve email
     And the email child should have matched case id "<expectedCaseId>"
 # Expected matches are ordered id:ConfidenceBand:score entries separated by semicolons.
 # Leave expectedMatches blank to assert an empty possibleCaseMatches array.
-# Only no-strong-ID rows can remain PendingMatch. Strong-ID rows fold or conflict.
+# Strong-ID rows fold when the identifier matches a case, and conflict when identifiers disagree.
+# A strong ID that matches no case creates a case (see the strong identifier scenario), not a PendingMatch.
 
     Examples:
       | emailId                           | conversationId  | parentName  | parentEmail             | childName   | nhsNumber    | caseId    | dateOfBirth | mosaicId | dfeId   | synergyId | expectedStatus | expectedCaseId        | expectedMatches                                                 |
@@ -199,7 +206,8 @@ Feature: Retrieve email
     When a request is made to the /mailbox/"ehcp-team-shared-1"/emails/"scenario-4-out-of-office" endpoint
     Then the email record should be retrieved matching "scenario-4-out-of-office-expected-result.json"
 
-  Scenario Outline: Email with a fuzzy-matching child and matching parent lists a single low-confidence possible match
+
+  Scenario Outline: Email with a fuzzy-matching child folds on a parent match and stays pending without one
     Given the mailbox "ehcp-team-shared-1" is selected
     And the scenario values are
       | key              | value              |
@@ -233,17 +241,22 @@ Feature: Retrieve email
 # Seeded cases: spec-case-oliver-hughes (Oliver Hughes, DOB 2018-06-12, NHS 222 333 4445, Parent Grace Hughes, grace.hughes@example.com)
 # and spec-case-amelia-khan (Amelia Khan, DOB 2018-06-12, NHS 222 333 5556, Parent Sara Khan, sara.khan@example.com), which must not match.
 # parentName / parentEmail are the email sender. childParentName / childParentEmail are the extracted child's Parent relationship.
-# Expected matches are ordered id:ConfidenceBand:score entries separated by semicolons. Low is a score below 10.
+# A parent match (name or email) folds the email into the case it belongs to. The confidence band comes from the score.
+# Sara Khan belongs to Amelia Khan. Amelia does not match on name or DOB, so that parent does not fold the email into Amelia.
+# Without a parent match the email stays PendingMatch and lists the Low candidate. Low is a score below 10.
+# Expected matches are ordered id:ConfidenceBand:score entries separated by semicolons.
+
 
     Examples:
-      | emailId                     | conversationId  | parentName  | parentEmail             | childName | nhsNumber | caseId | dateOfBirth | mosaicId | dfeId | synergyId | childParentName | childParentEmail         | expectedStatus | expectedCaseId | expectedMatches               |
-      | spec-l-name-parent-email    | spec-thread-l01 | Sam Example | sam.example@example.com | Oli       |           |        |             |          |       |           | Grace Hughes    | grace.hughes@example.com | PendingMatch   |                | spec-case-oliver-hughes:Low:7 |
-      | spec-l-name-parent-name     | spec-thread-l02 | Sam Example | sam.example@example.com | Oliver    |           |        |             |          |       |           | Grace Hughes    | other@example.com        | PendingMatch   |                | spec-case-oliver-hughes:Low:5 |
-      | spec-l-name-parent-only     | spec-thread-l03 | Sam Example | sam.example@example.com | Oli       |           |        |             |          |       |           | Mark Hughes     | grace.hughes@example.com | PendingMatch   |                | spec-case-oliver-hughes:Low:5 |
-      | spec-l-name-initials-parent | spec-thread-l04 | Sam Example | sam.example@example.com | Oliver H  |           |        |             |          |       |           | Grace Hughes    | other@example.com        | PendingMatch   |                | spec-case-oliver-hughes:Low:5 |
-      | spec-l-name-other-parent    | spec-thread-l05 | Sam Example | sam.example@example.com | Oli       |           |        |             |          |       |           | Sara Khan       | sara.khan@example.com    | PendingMatch   |                | spec-case-oliver-hughes:Low:3 |
+      | emailId                     | conversationId  | parentName  | parentEmail             | childName | nhsNumber | caseId | dateOfBirth | mosaicId | dfeId | synergyId | childParentName | childParentEmail         | expectedStatus | expectedCaseId          | expectedMatches               |
+      | spec-l-name-parent-email    | spec-thread-l01 | Sam Example | sam.example@example.com | Oli       |           |        |             |          |       |           | Grace Hughes    | grace.hughes@example.com | Folded         | spec-case-oliver-hughes |                               |
+      | spec-l-name-parent-name     | spec-thread-l02 | Sam Example | sam.example@example.com | Oliver    |           |        |             |          |       |           | Grace Hughes    | other@example.com        | Folded         | spec-case-oliver-hughes |                               |
+      | spec-l-name-parent-only     | spec-thread-l03 | Sam Example | sam.example@example.com | Oli       |           |        |             |          |       |           | Mark Hughes     | grace.hughes@example.com | Folded         | spec-case-oliver-hughes |                               |
+      | spec-l-name-initials-parent | spec-thread-l04 | Sam Example | sam.example@example.com | Oliver H  |           |        |             |          |       |           | Grace Hughes    | other@example.com        | Folded         | spec-case-oliver-hughes |                               |
+      | spec-l-name-other-parent    | spec-thread-l05 | Sam Example | sam.example@example.com | Oli       |           |        |             |          |       |           | Sara Khan       | sara.khan@example.com    | PendingMatch   |                         | spec-case-oliver-hughes:Low:3 |
 
-  Scenario Outline: Email with a fuzzy-matching child whose identifier differs from the case lists a single low-confidence possible match
+ 
+  Scenario Outline: Email with a strong identifier that matches no case creates a case
     Given the mailbox "ehcp-team-shared-1" is selected
     And the scenario values are
       | key              | value              |
@@ -276,19 +289,23 @@ Feature: Retrieve email
     And the email child should have matched case id "<expectedCaseId>"
 # Seeded cases: spec-case-isla-patel (Isla Patel, DOB 2017-09-23, NHS 333 444 5556, Synergy S-3334445, DfE D-40001, Mosaic M-30001,
 # Parent Raj Patel, raj.patel@example.com) and spec-case-ivy-chen (Ivy Chen, DOB 2017-09-23, NHS 333 444 6667, Parent Lin Chen), which must not match.
-# Each row gives the child one identifier that matches no case. Today this creates a new case: PendingMatch needs PO confirmation and a code change.
-# Expected matches are ordered id:ConfidenceBand:score entries separated by semicolons. Low is a score below 10.
+# Each row gives the child one identifier that matches no case. The name and parent match spec-case-isla-patel.
+# A strong identifier that matches no case creates a new case: Folded, expectedCaseId "created", no possible matches.
+# The parent match does not fold the email into spec-case-isla-patel, because the strong identifier rule applies first.
+# "created" means the case the system creates. The step only checks that a case ID was returned, not its value.
+
 
     Examples:
-      | emailId                | conversationId  | parentName  | parentEmail             | childName | nhsNumber    | caseId    | dateOfBirth | mosaicId | dfeId   | synergyId | childParentName | childParentEmail      | expectedStatus | expectedCaseId | expectedMatches            |
-      | spec-l-diff-nhs        | spec-thread-l06 | Sam Example | sam.example@example.com | Isla      | 999 888 7776 |           |             |          |         |           | Raj Patel       | raj.patel@example.com | PendingMatch   |                | spec-case-isla-patel:Low:7 |
-      | spec-l-diff-mosaic     | spec-thread-l07 | Sam Example | sam.example@example.com | Isla      |              |           |             | M-39999  |         |           | Raj Patel       | raj.patel@example.com | PendingMatch   |                | spec-case-isla-patel:Low:7 |
-      | spec-l-diff-dfe        | spec-thread-l08 | Sam Example | sam.example@example.com | Isla      |              |           |             |          | D-49999 |           | Raj Patel       | raj.patel@example.com | PendingMatch   |                | spec-case-isla-patel:Low:7 |
-      | spec-l-diff-synergy    | spec-thread-l09 | Sam Example | sam.example@example.com | Isla      |              |           |             |          |         | S-3999999 | Raj Patel       | raj.patel@example.com | PendingMatch   |                | spec-case-isla-patel:Low:7 |
-      | spec-l-diff-caseid     | spec-thread-l10 | Sam Example | sam.example@example.com | Isla      |              | S-3999999 |             |          |         |           | Raj Patel       | raj.patel@example.com | PendingMatch   |                | spec-case-isla-patel:Low:7 |
-      | spec-l-diff-nhs-parent | spec-thread-l11 | Sam Example | sam.example@example.com | Isla      | 999 888 7776 |           |             |          |         |           | Raj Patel       | other@example.com     | PendingMatch   |                | spec-case-isla-patel:Low:5 |
+      | emailId                | conversationId  | parentName  | parentEmail             | childName | nhsNumber    | caseId    | dateOfBirth | mosaicId | dfeId   | synergyId | childParentName | childParentEmail      | expectedStatus | expectedCaseId | expectedMatches |
+      | spec-l-diff-nhs        | spec-thread-l06 | Sam Example | sam.example@example.com | Isla      | 999 888 7776 |           |             |          |         |           | Raj Patel       | raj.patel@example.com | Folded         | created        |                 |
+      | spec-l-diff-mosaic     | spec-thread-l07 | Sam Example | sam.example@example.com | Isla      |              |           |             | M-39999  |         |           | Raj Patel       | raj.patel@example.com | Folded         | created        |                 |
+      | spec-l-diff-dfe        | spec-thread-l08 | Sam Example | sam.example@example.com | Isla      |              |           |             |          | D-49999 |           | Raj Patel       | raj.patel@example.com | Folded         | created        |                 |
+      | spec-l-diff-synergy    | spec-thread-l09 | Sam Example | sam.example@example.com | Isla      |              |           |             |          |         | S-3999999 | Raj Patel       | raj.patel@example.com | Folded         | created        |                 |
+      | spec-l-diff-caseid     | spec-thread-l10 | Sam Example | sam.example@example.com | Isla      |              | S-3999999 |             |          |         |           | Raj Patel       | raj.patel@example.com | Folded         | created        |                 |
+      | spec-l-diff-nhs-parent | spec-thread-l11 | Sam Example | sam.example@example.com | Isla      | 999 888 7776 |           |             |          |         |           | Raj Patel       | other@example.com     | Folded         | created        |                 |
 
-  Scenario Outline: Email with a child matching only on date of birth lists a single low-confidence possible match
+
+  Scenario Outline: Email with a child matching on date of birth folds on a parent match and stays pending without one
     Given the mailbox "ehcp-team-shared-1" is selected
     And the scenario values are
       | key              | value              |
@@ -322,11 +339,14 @@ Feature: Retrieve email
 # Seeded cases: spec-case-noah-williams (Noah Williams, DOB 2019-05-05, NHS 444 555 6667, Parent Emma Williams, emma.williams@example.com)
 # and spec-case-zara-ahmed (Zara Ahmed, DOB 2016-01-20, NHS 444 555 7778, Parent Omar Ahmed), which must not match.
 # Leave childParentName / childParentEmail blank for no extracted relationships.
-# Expected matches are ordered id:ConfidenceBand:score entries separated by semicolons. Low is a score below 10.
+# A date of birth match with a parent match folds the email into spec-case-noah-williams.
+# A date of birth match with no parent match stays PendingMatch and lists the Low candidate. Low is a score below 10.
+# Expected matches are ordered id:ConfidenceBand:score entries separated by semicolons.
+
 
     Examples:
-      | emailId                 | conversationId  | parentName  | parentEmail             | childName | nhsNumber | caseId | dateOfBirth | mosaicId | dfeId | synergyId | childParentName | childParentEmail          | expectedStatus | expectedCaseId | expectedMatches               |
-      | spec-l-dob-other-name   | spec-thread-l12 | Sam Example | sam.example@example.com | Leo       |           |        |  2019-05-05 |          |       |           |                 |                           | PendingMatch   |                | spec-case-noah-williams:Low:7 |
-      | spec-l-dob-no-name      | spec-thread-l13 | Sam Example | sam.example@example.com |           |           |        |  2019-05-05 |          |       |           |                 |                           | PendingMatch   |                | spec-case-noah-williams:Low:7 |
-      | spec-l-dob-parent-email | spec-thread-l14 | Sam Example | sam.example@example.com | Leo       |           |        |  2019-05-05 |          |       |           | Kate Brown      | emma.williams@example.com | PendingMatch   |                | spec-case-noah-williams:Low:9 |
-      | spec-l-dob-parent-name  | spec-thread-l15 | Sam Example | sam.example@example.com | Leo       |           |        |  2019-05-05 |          |       |           | Emma Williams   | other@example.com         | PendingMatch   |                | spec-case-noah-williams:Low:9 |
+      | emailId                 | conversationId  | parentName  | parentEmail             | childName | nhsNumber | caseId | dateOfBirth | mosaicId | dfeId | synergyId | childParentName | childParentEmail          | expectedStatus | expectedCaseId          | expectedMatches               |
+      | spec-l-dob-other-name   | spec-thread-l12 | Sam Example | sam.example@example.com | Leo       |           |        | 2019-05-05  |          |       |           |                 |                           | PendingMatch   |                         | spec-case-noah-williams:Low:7 |
+      | spec-l-dob-no-name      | spec-thread-l13 | Sam Example | sam.example@example.com |           |           |        | 2019-05-05  |          |       |           |                 |                           | PendingMatch   |                         | spec-case-noah-williams:Low:7 |
+      | spec-l-dob-parent-email | spec-thread-l14 | Sam Example | sam.example@example.com | Leo       |           |        | 2019-05-05  |          |       |           | Kate Brown      | emma.williams@example.com | Folded         | spec-case-noah-williams |                               |
+      | spec-l-dob-parent-name  | spec-thread-l15 | Sam Example | sam.example@example.com | Leo       |           |        | 2019-05-05  |          |       |           | Emma Williams   | other@example.com         | Folded         | spec-case-noah-williams |                               |
