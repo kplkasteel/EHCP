@@ -256,7 +256,7 @@ Feature: Retrieve email
       | spec-l-name-other-parent    | spec-thread-l05 | Sam Example | sam.example@example.com | Oli       |           |        |             |          |       |           | Sara Khan       | sara.khan@example.com    | PendingMatch   |                         | spec-case-oliver-hughes:Low:3 |
 
  
-  Scenario Outline: Email with a strong identifier that matches no case creates a case
+  Scenario Outline: Email with a child whose identifier differs from the matched case is a conflict
     Given the mailbox "ehcp-team-shared-1" is selected
     And the scenario values are
       | key              | value              |
@@ -289,20 +289,20 @@ Feature: Retrieve email
     And the email child should have matched case id "<expectedCaseId>"
 # Seeded cases: spec-case-isla-patel (Isla Patel, DOB 2017-09-23, NHS 333 444 5556, Synergy S-3334445, DfE D-40001, Mosaic M-30001,
 # Parent Raj Patel, raj.patel@example.com) and spec-case-ivy-chen (Ivy Chen, DOB 2017-09-23, NHS 333 444 6667, Parent Lin Chen), which must not match.
-# Each row gives the child one identifier that matches no case. The name and parent match spec-case-isla-patel.
-# A strong identifier that matches no case creates a new case: Folded, expectedCaseId "created", no possible matches.
-# The parent match does not fold the email into spec-case-isla-patel, because the strong identifier rule applies first.
-# "created" means the case the system creates. The step only checks that a case ID was returned, not its value.
+# Each row gives the child one identifier that differs from spec-case-isla-patel. The name and parent match that case.
+# A strong ID of the same type with a different value is a conflict (rule 5a): Conflict, no matched case, spec-case-isla-patel listed as a candidate.
+# The candidate score is the name and parent score: 7, or 5 when the parent email differs.
+
 
 
     Examples:
-      | emailId                | conversationId  | parentName  | parentEmail             | childName | nhsNumber    | caseId    | dateOfBirth | mosaicId | dfeId   | synergyId | childParentName | childParentEmail      | expectedStatus | expectedCaseId | expectedMatches |
-      | spec-l-diff-nhs        | spec-thread-l06 | Sam Example | sam.example@example.com | Isla      | 999 888 7776 |           |             |          |         |           | Raj Patel       | raj.patel@example.com | Folded         | created        |                 |
-      | spec-l-diff-mosaic     | spec-thread-l07 | Sam Example | sam.example@example.com | Isla      |              |           |             | M-39999  |         |           | Raj Patel       | raj.patel@example.com | Folded         | created        |                 |
-      | spec-l-diff-dfe        | spec-thread-l08 | Sam Example | sam.example@example.com | Isla      |              |           |             |          | D-49999 |           | Raj Patel       | raj.patel@example.com | Folded         | created        |                 |
-      | spec-l-diff-synergy    | spec-thread-l09 | Sam Example | sam.example@example.com | Isla      |              |           |             |          |         | S-3999999 | Raj Patel       | raj.patel@example.com | Folded         | created        |                 |
-      | spec-l-diff-caseid     | spec-thread-l10 | Sam Example | sam.example@example.com | Isla      |              | S-3999999 |             |          |         |           | Raj Patel       | raj.patel@example.com | Folded         | created        |                 |
-      | spec-l-diff-nhs-parent | spec-thread-l11 | Sam Example | sam.example@example.com | Isla      | 999 888 7776 |           |             |          |         |           | Raj Patel       | other@example.com     | Folded         | created        |                 |
+      | emailId                | conversationId  | parentName  | parentEmail             | childName | nhsNumber    | caseId    | dateOfBirth | mosaicId | dfeId   | synergyId | childParentName | childParentEmail      | expectedStatus | expectedCaseId | expectedMatches            |
+      | spec-l-diff-nhs        | spec-thread-l06 | Sam Example | sam.example@example.com | Isla      | 999 888 7776 |           |             |          |         |           | Raj Patel       | raj.patel@example.com | Conflict       |                | spec-case-isla-patel:Low:7 |
+      | spec-l-diff-mosaic     | spec-thread-l07 | Sam Example | sam.example@example.com | Isla      |              |           |             | M-39999  |         |           | Raj Patel       | raj.patel@example.com | Conflict       |                | spec-case-isla-patel:Low:7 |
+      | spec-l-diff-dfe        | spec-thread-l08 | Sam Example | sam.example@example.com | Isla      |              |           |             |          | D-49999 |           | Raj Patel       | raj.patel@example.com | Conflict       |                | spec-case-isla-patel:Low:7 |
+      | spec-l-diff-synergy    | spec-thread-l09 | Sam Example | sam.example@example.com | Isla      |              |           |             |          |         | S-3999999 | Raj Patel       | raj.patel@example.com | Conflict       |                | spec-case-isla-patel:Low:7 |
+      | spec-l-diff-caseid     | spec-thread-l10 | Sam Example | sam.example@example.com | Isla      |              | S-3999999 |             |          |         |           | Raj Patel       | raj.patel@example.com | Conflict       |                | spec-case-isla-patel:Low:7 |
+      | spec-l-diff-nhs-parent | spec-thread-l11 | Sam Example | sam.example@example.com | Isla      | 999 888 7776 |           |             |          |         |           | Raj Patel       | other@example.com     | Conflict       |                | spec-case-isla-patel:Low:5 |
 
 
   Scenario Outline: Email with a child matching on date of birth folds on a parent match and stays pending without one
