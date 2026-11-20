@@ -1,82 +1,219 @@
-# Specs data fixtures
+# Specs data fixtures: manual verification guide
 
-Naming: `scenario-<n>-<slug>-<role>.json`. Roles: `data`, `queue`, `graph-email`, `ai-extract`, `expected-result`, and `cases` (seeded case documents) for scenarios 5 and 7–9.
+This folder holds the JSON fixtures the `GetEmail.feature` scenarios load. This README lets you check each example by hand: compare the AI-extracted child with the seeded case, then follow the rule path to the expected result.
 
-| Scenario | Feature | Covers | Fixtures |
+Rules are in [`tests/MATCHING-RULES.md`](../../MATCHING-RULES.md). Rule IDs in the tables below (for example `6a`, `7d`) match that file.
+
+## How to verify an example
+
+1. Find the example in the tables below.
+2. Read the AI-extracted child. Blank Examples columns are omitted.
+3. Compare it with the seeded case(s) listed for that scenario.
+4. Follow the rule path from step 2 of the rules file. Each step is a rule ID.
+5. Check the result matches the expected status, matched case and possible matches.
+
+Values in the AI column come from the feature file's Examples table, not from the `ai-extract` JSON templates. Blank fields are not shown.
+
+## Scenario summary
+
+| Scenario | Feature section | Examples | Seeded cases | Fixtures |
+|---|---|---|---|---|
+| Retrieval, cross-mailbox, not found | Retrieve email | 4 | none | none (endpoint only) |
+| 1 Single child, not enough for a case | Email with child information extracted but not enough to create a case | 1 | none | `scenario-1-single-child-*` |
+| 3 No child extracted | Email with no child information is discarded | 1 | none | `scenario-3-no-child-*` |
+| 4 Out-of-office reply | An out-of-office reply is discarded | 1 | none | `scenario-4-out-of-office-*` |
+| Creation | Email with child information extracted and enough information should create a case | 6 | none (`case-creation-data.json` is empty) | `case-creation-*` (tokenised) |
+| 5 Fuzzy names and date of birth | Email with a fuzzy-matching child folds on a Medium or High score and lists Low possible matches | 23 | Fred Bloggs, Jones Smith | `scenario-5-fuzzy-name-possible-matches-*` |
+| 6 Strong identifiers | Strong identifier matching folds a case or returns scored conflicts | 17 | Fred Bloggs, Jones Smith | same as scenario 5 |
+| 7 Parent match | Email with a fuzzy-matching child folds on a parent match and stays pending without one | 5 | Oliver Hughes, Amelia Khan | `scenario-7-low-match-relationships-*` |
+| 8 Identifier differs | Email with a child whose identifier differs from the matched case is a conflict | 6 | Isla Patel, Ivy Chen | `scenario-8-low-match-identifier-mismatch-*` |
+| 9 Date of birth | Email with a child matching on date of birth folds on a parent match and stays pending without one | 4 | Noah Williams, Zara Ahmed | `scenario-9-low-match-dob-*` |
+
+`scenario-6-no-dob-match-possible-matches-*` exists here but no scenario in `GetEmail.feature` uses it. Treat it as unused until it is either wired in or removed.
+
+## Seeded cases
+
+Scenarios 5 and 6 seed the same two cases. Scenarios 7, 8 and 9 each seed their own pair: a case the child should match and a case that must not match.
+
+### Scenario 5 and 6 cases (`scenario-5-fuzzy-name-possible-matches-cases.json`)
+
+| Case | Name | DOB | NHS | Case ID | DfE | Mosaic | Synergy | Parent |
+|---|---|---|---|---|---|---|---|---|
+| `spec-case-fred-bloggs` | Fred Bloggs | 2020-03-01 | 123 456 7890 | S-1234567 | D-20001 | M-10001 | S-1234567 | none |
+| `spec-case-jones-smith` | Jones Smith | 2020-03-01 | 456 789 0123 | S-7654321 | D-20002 | M-10002 | S-7654321 | none |
+
+### Scenario 7 cases
+
+| Case | Name | DOB | NHS | Case ID | DfE | Mosaic | Synergy | Parent | Role |
+|---|---|---|---|---|---|---|---|---|---|
+| `spec-case-oliver-hughes` | Oliver Hughes | 2018-06-12 | 222 333 4445 | S-2223334 | D-30001 | M-20001 | S-2223334 | Grace Hughes, grace.hughes@example.com | should match |
+| `spec-case-amelia-khan` | Amelia Khan | 2018-06-12 | 222 333 5556 | S-2223335 | D-30002 | M-20002 | S-2223335 | Sara Khan, sara.khan@example.com | must not match |
+
+### Scenario 8 cases
+
+| Case | Name | DOB | NHS | Case ID | DfE | Mosaic | Synergy | Parent | Role |
+|---|---|---|---|---|---|---|---|---|---|
+| `spec-case-isla-patel` | Isla Patel | 2017-09-23 | 333 444 5556 | S-3334445 | D-40001 | M-30001 | S-3334445 | Raj Patel, raj.patel@example.com | should match |
+| `spec-case-ivy-chen` | Ivy Chen | 2017-09-23 | 333 444 6667 | S-3334446 | D-40002 | M-30002 | S-3334446 | Lin Chen, lin.chen@example.com | must not match |
+
+### Scenario 9 cases
+
+| Case | Name | DOB | NHS | Case ID | DfE | Mosaic | Synergy | Parent | Role |
+|---|---|---|---|---|---|---|---|---|---|
+| `spec-case-noah-williams` | Noah Williams | 2019-05-05 | 444 555 6667 | S-4445556 | D-50001 | M-40001 | S-4445556 | Emma Williams, emma.williams@example.com | should match |
+| `spec-case-zara-ahmed` | Zara Ahmed | 2016-01-20 | 444 555 7778 | S-4445557 | D-50002 | M-40002 | S-4445557 | Omar Ahmed, omar.ahmed@example.com | must not match |
+
+## Retrieval, discard and single child
+
+No seeded cases. Retrieval rows test the endpoint only.
+
+| Example | AI-extracted child | Expected | Rule path |
 |---|---|---|---|
-| 1 | GetEmail | Single child extracted, insufficient for a case: status `Processed`, child `PendingMatch` | `scenario-1-single-child-*` |
-| 2 | GetEmail (Scenario Outline) | Single child with enough information is folded into a new case. Runs once per Examples row. | `case-creation-*` (tokenised) |
-| 3 | GetEmail | No child extracted, discarded status with rationale recorded. | `scenario-3-no-child-*` |
-| 4 | GetEmail | Irrelevant out-of-office email is discarded with its rationale. | `scenario-4-out-of-office-*` |
-| 5a | GetEmail (22 examples) | PendingMatch with DOB/fuzzy-name (10), DOB-only (7), initials+dob (10), exact-name-only (5), exact-name+DOB (12), fuzzy-name-only (3), no matches, ties and ordering. | `scenario-5-fuzzy-name-possible-matches-*` |
-| 5b | GetEmail (17 examples) | NHS, DfE, Mosaic, Synergy attribute and Synergy caseId; Folded and Conflict paths, including competing identifiers and additive scores. | same `scenario-5-*` templates |
-| 7 | GetEmail (5 examples) | US-0004: single Low possible match from a fuzzy name plus the child's extracted parent name and/or email; child `PendingMatch`, no matched case. | `scenario-7-low-match-relationships-*` |
-| 8 | GetEmail (6 examples) | US-0004: single Low possible match where the child's NHS, Mosaic, DfE, Synergy or caseId differs from the case. Fails until the matching change lands (today it creates a new case). | `scenario-8-low-match-identifier-mismatch-*` |
-| 9 | GetEmail (4 examples) | US-0004: single Low possible match on date of birth only, with and without a matching parent name or email. | `scenario-9-low-match-dob-*` |
+| Retrieve `spec-email-001` | none | Retrieved, status Unprocessed | none |
+| Retrieve `spec-email-002` | none | Retrieved, status Processed | none |
+| Cross-mailbox `spec-email-005` | none | Not found in shared-2 | none |
+| Not present `spec-email-006` | none | Not found | none |
+| Scenario 1 single child | Name Alex Example; DOB 2016-03-14 | PendingMatch, no matched case, no possible matches | 3, 3b |
+| Scenario 3 no child | none | Discarded: "No child information was extracted from the email." | 1 |
+| Scenario 4 out-of-office | none | Discarded: "Out of office reply." | 1 |
 
-Scenarios without fixtures use inline values in the feature file.
+## Creation
 
-## Case creation tokens
+No seeded cases. Each example has a strong ID and a name, so the flow creates a case.
 
-`case-creation-*` files are templates. Values come from the Outline's `the scenario values are` and `the child identifiers are` tables.
+| Example | AI-extracted child | Expected | Rule path |
+|---|---|---|---|
+| `spec-c-1` | Name Alex Example; NHS 987 654 3210; DOB 2016-03-14 | Folded to a new case, possible matches none | 3, 3a |
+| `spec-c-1` | Name Alex Example; NHS 987 654 3210 | Folded to a new case, possible matches none | 3, 3a |
+| `spec-c-2` | Name Alex Example; DfE D-20001 | Folded to a new case, possible matches none | 3, 3a |
+| `spec-c-3` | Name Alex; Mosaic M-10001; DfE D-20001 | Folded to a new case, possible matches none | 3, 3a |
+| `spec-c-3` | Name Alex; Mosaic M-10001 | Folded to a new case, possible matches none | 3, 3a |
+| `spec-c-3` | Name Alex Example; Synergy S-1234567 | Folded to a new case, possible matches none | 3, 3a |
+
+## Scenario 5: fuzzy names and date of birth
+
+Seeded: Fred Bloggs and Jones Smith. Neither has a parent, so the flow takes the no-parent route (rule 6c).
+
+| Example | AI-extracted child | Expected | Rule path |
+|---|---|---|---|
+| `scenario-5-fuzzy-name-possible-matches` | Name Freddy; DOB 2020-03-01 | Folded to `spec-case-fred-bloggs` (Medium 10 beats Jones Low 7) | 4, 6c, 7d |
+| `spec-f-fredd-dob` | Name Fredd; DOB 2020-03-01 | Folded to `spec-case-fred-bloggs` | 4, 6c, 7d |
+| `spec-f-fred-dob` | Name Fred; DOB 2020-03-01 | Folded to `spec-case-fred-bloggs` | 4, 6c, 7d |
+| `spec-f-frederick-dob` | Name Frederick; DOB 2020-03-01 | Folded to `spec-case-fred-bloggs` | 4, 6c, 7d |
+| `spec-f-jones-dob` | Name Jones; DOB 2020-03-01 | Folded to `spec-case-jones-smith` (Medium 10 beats Fred Low 7) | 4, 6c, 7d |
+| `spec-f-other-name-dob` | Name Martha; DOB 2020-03-01 | PendingMatch; Fred Low 7, Jones Low 7 | 4, 6c, 7b |
+| `spec-f-dob-only` | No name; DOB 2020-03-01 | PendingMatch; Fred Low 7, Jones Low 7 | 4, 6c, 7b |
+| `spec-f-fred-initial-dob` | Name F. Bloggs; DOB 2020-03-01 | Folded to `spec-case-fred-bloggs` | 4, 6c, 7d |
+| `spec-f-jones-initial-dob` | Name J. Smith; DOB 2020-03-01 | Folded to `spec-case-jones-smith` | 4, 6c, 7d |
+| `spec-f-fuzzy-name-only` | Name Freddy | PendingMatch; Fred Low 3 | 4, 6c, 8a |
+| `spec-f-fredd-name-only` | Name Fredd | PendingMatch; Fred Low 3 | 4, 6c, 8a |
+| `spec-f-jones-name-only` | Name Jones | PendingMatch; Jones Low 3 | 4, 6c, 8a |
+| `spec-f-full-name-only` | Name Fred Bloggs | PendingMatch; Fred Low 5 | 4, 6c, 8a |
+| `spec-f-jones-full-only` | Name Jones Smith | PendingMatch; Jones Low 5 | 4, 6c, 8a |
+| `spec-f-exact-fred-dob` | Name Fred Bloggs; DOB 2020-03-01 | Folded to `spec-case-fred-bloggs` (Medium 12 beats Jones Low 7) | 4, 6c, 7d |
+| `spec-f-exact-jones-dob` | Name Jones Smith; DOB 2020-03-01 | Folded to `spec-case-jones-smith` (Medium 12 beats Fred Low 7) | 4, 6c, 7d |
+| `spec-f-no-evidence` | none | PendingMatch, no possible matches | 3, 3b |
+| `spec-f-different-dob` | Name Fredster; DOB 2021-03-01 | PendingMatch; Fred Low 3 | 4, 6c, 8a |
+| `spec-f-full-lowercase-only` | Name fReD bLoGgS | PendingMatch; Fred Low 5 | 4, 6c, 8a |
+| `spec-f-full-lowercase-dob` | Name fReD bLoGgS; DOB 2020-03-01 | Folded to `spec-case-fred-bloggs` (Medium 12 beats Jones Low 7) | 4, 6c, 7d |
+| `spec-f-different-surname-dob` | Name Fred Harper; DOB 2020-03-01 | Folded to `spec-case-fred-bloggs` (Medium 10 beats Jones Low 7) | 4, 6c, 7d |
+| `spec-f-fuzzy-first-name-dob` | Name Freddy Bloggs; DOB 2020-03-01 | Folded to `spec-case-fred-bloggs` (Medium 10 beats Jones Low 7) | 4, 6c, 7d |
+| `spec-f-different-name-different-dob` | Name Tom; DOB 2019-03-01 | PendingMatch, no possible matches | 3, 3b |
+
+## Scenario 6: strong identifiers
+
+Seeded: Fred Bloggs and Jones Smith. Every example has a strong ID, so it goes through step 5.
+
+| Example | AI-extracted child | Expected | Rule path |
+|---|---|---|---|
+| `spec-s-nhs-fold` | Name Fred Bloggs; NHS 123 456 7890; DOB 2020-03-01 | Folded to `spec-case-fred-bloggs` | 4, 5, 5b |
+| `spec-s-dfe-fold` | Name Fred Bloggs; DfE D-20001; DOB 2020-03-01 | Folded to `spec-case-fred-bloggs` | 4, 5, 5b |
+| `spec-s-mosaic-fold` | Name Fred Bloggs; Mosaic M-10001; DOB 2020-03-01 | Folded to `spec-case-fred-bloggs` | 4, 5, 5b |
+| `spec-s-synergy-attribute-fold` | Name Fred Bloggs; Synergy S-1234567; DOB 2020-03-01 | Folded to `spec-case-fred-bloggs` | 4, 5, 5b |
+| `spec-s-synergy-field-fold` | Name Fred Bloggs; Case ID S-1234567; DOB 2020-03-01 | Folded to `spec-case-fred-bloggs` | 4, 5, 5b |
+| `spec-s-nhs-jones-fold` | Name Jones Smith; NHS 456 789 0123 | Folded to `spec-case-jones-smith` | 4, 5, 5b |
+| `spec-s-dfe-jones-fold` | Name Jones Smith; DfE D-20002 | Folded to `spec-case-jones-smith` | 4, 5, 5b |
+| `spec-s-nhs-conflict` | Name Alice; NHS 123 456 7890; DOB 2021-03-01 | Conflict; Fred Medium 10 | 4, 5, 5a |
+| `spec-s-dfe-conflict` | Name Alice; DfE D-20001; DOB 2021-03-01 | Conflict; Fred Medium 10 | 4, 5, 5a |
+| `spec-s-mosaic-conflict` | Name Alice; Mosaic M-10001; DOB 2021-03-01 | Conflict; Fred Medium 10 | 4, 5, 5a |
+| `spec-s-synergy-attribute-conflict` | Name Alice; Synergy S-1234567; DOB 2021-03-01 | Conflict; Fred Medium 10 | 4, 5, 5a |
+| `spec-s-synergy-field-conflict` | Name Alice; Case ID S-1234567; DOB 2021-03-01 | Conflict; Fred Medium 10 | 4, 5, 5a |
+| `spec-s-competing-ids` | Name Alice; NHS 123 456 7890 (Fred); DfE D-20002 (Jones) | Conflict; Fred Medium 10, Jones Medium 10 | 4, 5, 5a |
+| `spec-s-same-case-two-ids` | Name Alice; NHS 123 456 7890; DfE D-20001; DOB 2021-03-01 | Conflict; Fred High 20 | 4, 5, 5a |
+| `spec-s-competing-dob-ids` | Name Alice; NHS 123 456 7890 (Fred); DfE D-20002 (Jones); DOB 2020-03-01 | Conflict; Fred Medium 17, Jones Medium 17 | 4, 5, 5a |
+| `spec-s-exact-name-wrong-dob` | Name Fred Bloggs; NHS 123 456 7890; DOB 2021-03-01 | Conflict; Fred Medium 15 | 4, 5, 5a |
+| `spec-s-exact-name-competing-ids` | Name Fred Bloggs; NHS 123 456 7890 (Fred); DfE D-20002 (Jones); DOB 2020-03-01 | Conflict; Fred High 22, Jones Medium 17 | 4, 5, 5a |
+
+## Scenario 7: parent match
+
+Seeded: Oliver Hughes (should match), Amelia Khan (must not match). Parent is the child's extracted parent, not the email sender.
+
+| Example | AI-extracted child | Expected | Rule path |
+|---|---|---|---|
+| `spec-l-name-parent-email` | Name Oli; parent Grace Hughes, grace.hughes@example.com | Folded to `spec-case-oliver-hughes` | 4, 6, 6a |
+| `spec-l-name-parent-name` | Name Oliver; parent Grace Hughes, other@example.com | Folded to `spec-case-oliver-hughes` | 4, 6, 6a |
+| `spec-l-name-parent-only` | Name Oli; parent Mark Hughes, grace.hughes@example.com | Folded to `spec-case-oliver-hughes` | 4, 6, 6a |
+| `spec-l-name-initials-parent` | Name Oliver H; parent Grace Hughes, other@example.com | Folded to `spec-case-oliver-hughes` | 4, 6, 6a |
+| `spec-l-name-other-parent` | Name Oli; parent Sara Khan, sara.khan@example.com | PendingMatch; Oliver Low 3. Sara Khan's case (Amelia) does not match on name or DOB, so no fold. | 4, 6, 6c, 8a |
+
+## Scenario 8: identifier differs from the seeded case
+
+Seeded: Isla Patel. Every example has a strong ID that differs from Isla's value of the same type, and the name and parent match Isla.
+
+| Example | AI-extracted child | Expected | Rule path |
+|---|---|---|---|
+| `spec-l-diff-nhs` | Name Isla; NHS 999 888 7776; parent Raj Patel, raj.patel@example.com | Conflict; Isla Patel Low 7 | 4, 5, 5a |
+| `spec-l-diff-mosaic` | Name Isla; Mosaic M-39999; parent Raj Patel, raj.patel@example.com | Conflict; Isla Patel Low 7 | 4, 5, 5a |
+| `spec-l-diff-dfe` | Name Isla; DfE D-49999; parent Raj Patel, raj.patel@example.com | Conflict; Isla Patel Low 7 | 4, 5, 5a |
+| `spec-l-diff-synergy` | Name Isla; Synergy S-3999999; parent Raj Patel, raj.patel@example.com | Conflict; Isla Patel Low 7 | 4, 5, 5a |
+| `spec-l-diff-caseid` | Name Isla; Case ID S-3999999; parent Raj Patel, raj.patel@example.com | Conflict; Isla Patel Low 7 | 4, 5, 5a |
+| `spec-l-diff-nhs-parent` | Name Isla; NHS 999 888 7776; parent Raj Patel, other@example.com | Conflict; Isla Patel Low 5 | 4, 5, 5a |
+
+## Scenario 9: date of birth
+
+Seeded: Noah Williams (should match), Zara Ahmed (must not match). Date of birth 2019-05-05 matches Noah.
+
+| Example | AI-extracted child | Expected | Rule path |
+|---|---|---|---|
+| `spec-l-dob-other-name` | Name Leo; DOB 2019-05-05; no parent | PendingMatch; Noah Low 7 | 4, 6c, 8a |
+| `spec-l-dob-no-name` | No name; DOB 2019-05-05; no parent | PendingMatch; Noah Low 7 | 4, 6c, 8a |
+| `spec-l-dob-parent-email` | Name Leo; DOB 2019-05-05; parent Kate Brown, emma.williams@example.com | Folded to `spec-case-noah-williams` | 4, 6, 6a |
+| `spec-l-dob-parent-name` | Name Leo; DOB 2019-05-05; parent Emma Williams, other@example.com | Folded to `spec-case-noah-williams` | 4, 6, 6a |
+
+## Token reference
+
+The `case-creation-*` files are templates. The other fixtures are plain JSON except where noted. Values come from the scenario's `the scenario values are` and `the child identifiers are` tables.
 
 | Token | Form | Source |
 |---|---|---|
-| `{{emailId}}`, `{{conversationId}}`, `{{parentName}}`, `{{parentEmail}}` | text, inside quotes in the file | scenario values |
+| `{{emailId}}`, `{{conversationId}}`, `{{parentName}}`, `{{parentEmail}}` | text, inside quotes | scenario values |
 | `{{childName:json}}`, `{{nhsNumber:json}}`, `{{caseId:json}}`, `{{dateOfBirth:json}}` | JSON literal, `null` when blank | child identifiers |
-| `{{attributes}}` | JSON array with `confidenceBand` | other identifiers, ai-extract input |
-| `{{expectedAttributes}}` | JSON array with `type` and `value` only | other identifiers, expected output |
-| `{{childRelationships}}` | JSON array: one `parent` relationship, or `[]` when blank | `childParentName` / `childParentEmail` scenario values, ai-extract input |
-| `{{expectedRelationships}}` | the same relationship as the API returns it (`confidenceBand: VeryLow`, `userStatus` and `sourceEmailId` null), or `[]` | `childParentName` / `childParentEmail` scenario values, expected output |
-| `{{graphMessageId}}`, `{{caseAlias}}`, `{{subject}}`, `{{childLabel}}`, `{{identifierLines}}` | derived | — |
+| `{{attributes}}` | JSON array with `confidenceBand`, for the AI-extract input | other identifiers |
+| `{{expectedAttributes}}` | JSON array with `type` and `value` only, for the expected output | other identifiers |
+| `{{childRelationships}}` | one `parent` relationship, or `[]` | `childParentName` / `childParentEmail` |
+| `{{expectedRelationships}}` | same relationship as the API returns it (`confidenceBand: VeryLow`), or `[]` | `childParentName` / `childParentEmail` |
+| `{{expectedMatches}}` | ordered `entityId:ConfidenceBand:score` list, or `[]` when blank | `expectedMatches` column |
+| `{{expectedStatus}}` | `PendingMatch` by default | `expectedStatus` column |
+| `{{expectedCaseId:json}}` | matched case ID, or `null` | `expectedCaseId` column |
+| `{{graphMessageId}}`, `{{caseAlias}}`, `{{subject}}`, `{{childLabel}}`, `{{identifierLines}}` | derived | derived |
 
-Adding an identifier means a table row plus an Examples column. Attributes are compared on `type` and `value` only. An unknown token fails the run.
+`expectedCaseId` takes the value `created` when the product should create a case. The step accepts any non-empty case ID in that case.
 
-Scenario 5 has **two outlines** (39 examples total). Both use the same dataset files.
+Attributes are compared on `type` and `value` only. An unknown token fails the run.
 
-The `{{expectedMatches}}` token is taken from `the scenario values are` via the
-`expectedMatches` Examples column. Each entry is `entityId:ConfidenceBand:score`,
-semicolon-separated and written in **descending score order**, with equal scores sorted
-by `entityId`. For example: `spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7`.
-An empty cell asserts `possibleCaseMatches: []`. The renderer fails early if the
-scenario forgets the `expectedMatches` table row.
+## Scores used by the fixtures
 
-`{{expectedStatus}}` defaults to `PendingMatch` in the fuzzy outline and is set from the
-`expectedStatus` Examples column in the strong-identifier outline (`Folded` or `Conflict`).
-`{{expectedCaseId:json}}` is `null` by default and set to the known internal entityId for
-`Folded` rows; it is checked via the existing matched-case alias handling.
+The Examples' `expectedMatches` scores were set by hand, not calculated by the production scorer. The fixture scores are:
 
-The input's `caseId` is the direct Synergy identifier; `synergyId`, `dfeId` and
-`mosaicId` are **attributes** generated from the table via `{{attributes}}`.
-Those same attributes are projected into the expected response via `{{expectedAttributes}}`.
-Seeded cases have all four strong identifiers, so each identifier is checked end-to-end.
+- Name: exact full name 5, first name or fuzzy name 3, initials 3. Only the best name rule counts.
+- Date of birth: 7.
+- Each strong identifier: 10 (NHS, Synergy, DfE, Mosaic).
 
-The scoring rules use **one, non-additive name evidence group**:
-exact full name=5, first/fuzzy name=3, or initials=3. Only the best applicable
-name rule contributes. Thus exact full name alone scores **5 (Low)**, and
-exact full name + DOB scores **12 (Medium)**. DOB=7 and each independent strong
-identifier (NHS, Synergy, DfE, Mosaic) adds 10. A fuzzy name + DOB still scores
-**10 (Medium)**; initials + DOB scores **10 (Medium)**. Name overlaps must
-never be counted more than once. The examples contain fixed expected scores,
-not values computed by calling the production scoring function.
-However strong IDs trigger case folding or conflict handling, not a pending fuzzy match.
-No production weights were changed to make the fixtures pass.
+Resulting bands: Low below 10, Medium 10 to 19, High 20 and above.
 
-## Scenarios 7–9: single low-confidence match (US-0004)
+## Adding a scenario
 
-Each scenario seeds its own two cases in `scenario-<n>-*-cases.json`: the case the child should match and
-a second case that must not appear, so each example asserts exactly one `Low` possible match (score below 10),
-child `PendingMatch` and no matched case. They do not reuse the scenario-5 cases.
-
-| Scenario | Case that should match | Case that must not match |
-|---|---|---|
-| 7 | `spec-case-oliver-hughes`: Oliver Hughes, DOB 2018-06-12, parent Grace Hughes (grace.hughes@example.com) | `spec-case-amelia-khan`: Amelia Khan, DOB 2018-06-12, parent Sara Khan |
-| 8 | `spec-case-isla-patel`: Isla Patel, DOB 2017-09-23, NHS 333 444 5556, S-3334445, D-40001, M-30001, parent Raj Patel (raj.patel@example.com) | `spec-case-ivy-chen`: Ivy Chen, DOB 2017-09-23, parent Lin Chen |
-| 9 | `spec-case-noah-williams`: Noah Williams, DOB 2019-05-05, parent Emma Williams (emma.williams@example.com) | `spec-case-zara-ahmed`: Zara Ahmed, DOB 2016-01-20, parent Omar Ahmed |
-
-`parentName` / `parentEmail` are the email sender only and play no part in matching. The child's parent comes from the
-`childParentName` / `childParentEmail` Examples columns via `{{childRelationships}}`; matching gives parent name 2 and
-parent email 2 when they equal a relationship on the case. Leave both blank for no extracted relationships.
-Data, queue and graph-email files are copies of the scenario-5 templates.
-
-Adding a scenario: copy the five role files for the next number, keep the shared ids in step (`emailId`, `conversationId`, Graph message id, `receivedDateTime`), and add a row above.
+1. Copy the five role files (`data`, `queue`, `graph-email`, `ai-extract`, `expected-result`) for the next number.
+2. Keep the shared IDs in step: `emailId`, `conversationId`, Graph message ID and `receivedDateTime`.
+3. Add a section above and a row to the scenario summary.
+4. For any new case, add a rule path to the example row, and check the rule exists in `MATCHING-RULES.md`.
