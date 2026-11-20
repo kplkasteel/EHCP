@@ -25,7 +25,8 @@ function Retry {
 }
 
 Write-Host 'Installing Azurite and Azure Functions Core Tools. Expect 1 to 5 minutes: download speed varies between runs.'
-Write-Host 'Install time has been optimised (npm prefix and cache moved to the D: drive), but it still depends on the network and cannot be guaranteed.'
+Write-Host 'Install time has been optimised (npm prefix and cache moved to the D: drive), but it still depends on factors outside of our control and cannot be guaranteed.'
+Write-Host 'Another option could be to have the installs already local to this repo & reference them directly, avoiding the need for npm install on each run but that adds additional maintenance overhead.'
 
 $want = @{ azurite = $AzuriteVersion; func = $FuncVersion }
 
