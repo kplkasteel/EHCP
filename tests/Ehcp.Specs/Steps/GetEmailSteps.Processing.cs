@@ -172,11 +172,17 @@ public sealed partial class GetEmailSteps
         Assert.NotNull(actual);
         Assert.NotNull(expected);
         AssertSameReceivedDateTime(expected, actual);
+        _output.WriteLine($"[EXPECTED RESULT] {dataset}");
+        _output.WriteLine(expected.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
 
         JsonArray expectedChildren = expected["children"]!.AsArray();
         JsonArray actualChildren = actual["children"]!.AsArray();
         Assert.Equal(expectedChildren.Count, actualChildren.Count);
         List<string> matchReport = WriteMatchReport(expectedChildren, actualChildren);
+        for (int i = 0; i < actualChildren.Count; i++)
+        {
+            _output.WriteLine($"[ACTUAL CHILD {i}] status={actualChildren[i]?["status"]} matchedCaseId={actualChildren[i]?["matchedCaseId"] ?? "null"}");
+        }
         for (int i = 0; i < expectedChildren.Count; i++)
         {
             JsonNode? expectedId = expectedChildren[i]?["matchedCaseId"];

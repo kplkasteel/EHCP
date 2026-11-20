@@ -40,7 +40,7 @@ internal static class PossibleMatchScorer
         return new PossibleCaseMatch(candidate.EntityId, BandFor(score), score);
     }
 
-    private static int NameScore(string? childName, string candidateName)
+    internal static int NameScore(string? childName, string candidateName)
     {
         string name = Normalize(childName);
         if (name.Length == 0) return 0;
@@ -50,6 +50,16 @@ internal static class PossibleMatchScorer
 
         string initials = Initials(childName);
         return initials.Length > 0 && initials == Initials(candidateName) ? 3 : 0;
+    }
+
+    internal static bool HasParentMatch(ExtractedChild child, CaseDocument candidate)
+    {
+        var incoming = child.Relationships.Where(item => Normalize(item.Type) == "PARENT");
+        var existing = candidate.Relationships.Where(item => Normalize(item.Type) == "PARENT");
+        return Shares(incoming.Select(item => Normalize(item.Name)),
+                      existing.Select(item => Normalize(item.Name)))
+            || Shares(incoming.Select(item => Normalize(item.Email)),
+                      existing.Select(item => Normalize(item.Email)));
     }
 
     private static ConfidenceBand BandFor(double score) => score switch

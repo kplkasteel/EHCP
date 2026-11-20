@@ -1,0 +1,51 @@
+[
+  {
+    "id": "spec-case-oliver-hughes",
+    "entityId": "spec-case-oliver-hughes",
+    "name": "Oliver Hughes",
+    "caseId": "S-2223334",
+    "nhsNumber": "222 333 4445",
+    "dateOfBirth": "2018-06-12",
+    "relationships": [
+      {
+        "type": "Parent",
+        "name": "Grace Hughes",
+        "email": "grace.hughes@example.com",
+        "phone": null,
+        "confidenceBand": "High"
+      }
+    ],
+    "attributes": [
+      { "type": "dfeId", "value": "D-30001", "confidenceBand": "High" },
+      { "type": "mosaicId", "value": "M-20001", "confidenceBand": "High" },
+      { "type": "synergyId", "value": "S-2223334", "confidenceBand": "High" }
+    ],
+    "communications": [],
+    "conflicts": []
+  }
+  ,
+  {
+    "id": "spec-case-amelia-khan",
+    "entityId": "spec-case-amelia-khan",
+    "name": "Amelia Khan",
+    "caseId": "S-2223335",
+    "nhsNumber": "222 333 5556",
+    "dateOfBirth": "2018-06-12",
+    "relationships": [
+      {
+        "type": "Parent",
+        "name": "Sara Khan",
+        "email": "sara.khan@example.com",
+        "phone": null,
+        "confidenceBand": "High"
+      }
+    ],
+    "attributes": [
+      { "type": "dfeId", "value": "D-30002", "confidenceBand": "High" },
+      { "type": "mosaicId", "value": "M-20002", "confidenceBand": "High" },
+      { "type": "synergyId", "value": "S-2223335", "confidenceBand": "High" }
+    ],
+    "communications": [],
+    "conflicts": []
+  }
+]

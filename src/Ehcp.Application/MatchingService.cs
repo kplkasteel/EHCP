@@ -24,12 +24,16 @@ public sealed class MatchingService(
         // once we've proved the basic flow works.
         CancellationToken ct)
     {
-        // Name and DOB alone do not authorize automatic matching or case creation.
+        // Strong identifiers take precedence; otherwise evaluate scored evidence and parent corroboration.
         StrongIdentifiers identifiers = StrongIdentifiers.From(child);
         if (!identifiers.HasAny)
         {
-            return Result(child, ChildStatus.PendingMatch,
-                possibleMatches: await FindPossibleMatchesAsync(mailboxId, child, ct));
+            IReadOnlyList<CaseDocument> weakCandidates =
+                await FindWeakCandidatesAsync(mailboxId, child, ct);
+            return await ResolveWeakMatchesAsync(mailboxId, email, source, extraction,
+                child, weakCandidates, ct)
+                ?? Result(child, ChildStatus.PendingMatch,
+                    possibleMatches: ScoreCandidates(child, weakCandidates));
         }
 
         IReadOnlyList<CaseDocument> candidates =
@@ -53,12 +57,18 @@ public sealed class MatchingService(
                 : Result(child, ChildStatus.Conflict, candidates: [conflict]);
         }
 
-        // Creating a new case also requires a name. //JL COMMENT/QUESTION: Requires an ID + NAME, but not DOB. Let's write a test for this.
-        //PK Answer: With no existing match, a name plus a strong identifier is enough to open a case. DOB is optional.
+        // An unmatched strong identifier does not prove that this is a new child.
+        // Check corroborated weak evidence before creating a case.
+        IReadOnlyList<CaseDocument> fallbackCandidates =
+            await FindWeakCandidatesAsync(mailboxId, child, ct);
+        ChildResult? fallback = await ResolveWeakMatchesAsync(mailboxId, email, source,
+            extraction, child, fallbackCandidates, ct);
+        if (fallback is not null)
+            return fallback;
+
+        // Creating a new case requires a name and a strong identifier.
         if (string.IsNullOrWhiteSpace(child.Name))
-        {
             return Result(child, ChildStatus.PendingMatch);
-        }
 
         // Deterministic IDs make retries converge even after a case write succeeds
         // but the final email write fails.
@@ -202,7 +212,51 @@ public sealed class MatchingService(
         }
     }
 
-    private async Task<IReadOnlyList<PossibleCaseMatch>> FindPossibleMatchesAsync(
+    private async Task<ChildResult?> ResolveWeakMatchesAsync(
+        string mailboxId, EmailDocument email, GraphEmail source,
+        EmailExtraction extraction, ExtractedChild child,
+        IReadOnlyList<CaseDocument> candidates, CancellationToken ct)
+    {
+        // A score and the decision to fold are distinct. A matching parent
+        // corroborates either child-name evidence or exact DOB evidence.
+        var eligible = candidates
+            .Select(candidate => (Candidate: candidate,
+                Match: PossibleMatchScorer.Score(child, candidate)))
+            .Where(item => item.Match.ConfidenceBand is ConfidenceBand.Medium or ConfidenceBand.High
+                || (PossibleMatchScorer.HasParentMatch(child, item.Candidate)
+                    && (PossibleMatchScorer.NameScore(child.Name, item.Candidate.Name) > 0
+                        || (child.DateOfBirth is not null
+                            && child.DateOfBirth == item.Candidate.DateOfBirth))))
+            .OrderByDescending(item => item.Match.Score)
+            .ThenBy(item => item.Candidate.EntityId, StringComparer.Ordinal)
+            .ToArray();
+
+        if (eligible.Length == 0)
+            return null;
+
+        // Never resolve competing plausible cases by entity ID or score alone.
+        // Contradictions take precedence over folding; retain their scored evidence.
+        if (eligible.Length > 1 || eligible.Any(item => Contradicts(child, item.Candidate)))
+            return Result(child, ChildStatus.Conflict,
+                possibleMatches: eligible.Select(item => item.Match).ToArray());
+
+        CaseDocument candidate = eligible[0].Candidate;
+        CaseDocument? conflict = await FoldAsync(mailboxId, candidate.EntityId,
+            email, source, extraction, child, ct);
+        return conflict is null
+            ? Result(child, ChildStatus.Folded, candidate.EntityId)
+            : Result(child, ChildStatus.Conflict, candidates: [conflict]);
+    }
+
+    private static IReadOnlyList<PossibleCaseMatch> ScoreCandidates(
+        ExtractedChild child, IReadOnlyList<CaseDocument> candidates) => candidates
+        .Select(candidate => PossibleMatchScorer.Score(child, candidate))
+        .Where(match => match.Score > 0)
+        .OrderByDescending(match => match.Score)
+        .ThenBy(match => match.EntityId, StringComparer.Ordinal)
+        .ToArray();
+
+    private async Task<IReadOnlyList<CaseDocument>> FindWeakCandidatesAsync(
         string mailboxId, ExtractedChild child, CancellationToken ct)
     {
         if (child.DateOfBirth is null && string.IsNullOrWhiteSpace(child.Name))
@@ -229,12 +283,7 @@ public sealed class MatchingService(
         logger.LogInformation(
             $"Found {candidates.Length} possible matches for {mailboxId} child {child.Name} ({child.DateOfBirth})");
 
-        return candidates
-            .Select(candidate => PossibleMatchScorer.Score(child, candidate))
-            .Where(match => match.Score > 0)
-            .OrderByDescending(match => match.Score)
-            .ThenBy(match => match.EntityId, StringComparer.Ordinal)
-            .ToArray();
+        return candidates;
     }
 
     private static bool Contradicts(ExtractedChild child, CaseDocument candidate)
