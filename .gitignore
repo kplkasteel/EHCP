@@ -23,3 +23,6 @@ __queuestorage__/AzuriteConfig
 
 # Deploy zips and publish output (rake deploy)
 artifacts/
+/__blobstorage__
+/__queuestorage__
+/AzuriteConfig

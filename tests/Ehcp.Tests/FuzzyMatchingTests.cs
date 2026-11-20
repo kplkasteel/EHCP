@@ -33,36 +33,56 @@ public sealed class FuzzyMatchingTests
     // The expected values are intentional constants, not calculated using the
     // production scoring class. This catches accidental changes to its weights.
     [Theory]
-    [InlineData("Freddy", "2020-03-01", "spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7")]
-    [InlineData("Fredd", "2020-03-01", "spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7")]
-    [InlineData("Fred", "2020-03-01", "spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7")]
-    [InlineData("Frederick", "2020-03-01", "spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7")]
-    [InlineData("Jones", "2020-03-01", "spec-case-jones-smith:Medium:10;spec-case-fred-bloggs:Low:7")]
-    [InlineData("Martha", "2020-03-01", "spec-case-fred-bloggs:Low:7;spec-case-jones-smith:Low:7")]
-    [InlineData(null, "2020-03-01", "spec-case-fred-bloggs:Low:7;spec-case-jones-smith:Low:7")]
-    [InlineData("F. Bloggs", "2020-03-01", "spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7")]
-    [InlineData("J. Smith", "2020-03-01", "spec-case-jones-smith:Medium:10;spec-case-fred-bloggs:Low:7")]
-    [InlineData("Freddy", null, "spec-case-fred-bloggs:Low:3")]
-    [InlineData("Fredd", null, "spec-case-fred-bloggs:Low:3")]
-    [InlineData("Jones", null, "spec-case-jones-smith:Low:3")]
-    [InlineData("Fred Bloggs", null, "spec-case-fred-bloggs:Low:5")]
-    [InlineData("Jones Smith", null, "spec-case-jones-smith:Low:5")]
-    [InlineData("Fred Bloggs", "2020-03-01", "spec-case-fred-bloggs:Medium:12;spec-case-jones-smith:Low:7")]
-    [InlineData("Jones Smith", "2020-03-01", "spec-case-jones-smith:Medium:12;spec-case-fred-bloggs:Low:7")]
+    [InlineData("Freddy", "2020-03-01", "spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7", "spec-case-fred-bloggs")]
+    [InlineData("Fredd", "2020-03-01", "spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7", "spec-case-fred-bloggs")]
+    [InlineData("Fred", "2020-03-01", "spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7", "spec-case-fred-bloggs")]
+    [InlineData("Frederick", "2020-03-01", "spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7", "spec-case-fred-bloggs")]
+    [InlineData("Jones", "2020-03-01", "spec-case-jones-smith:Medium:10;spec-case-fred-bloggs:Low:7", "spec-case-jones-smith")]
+    [InlineData("Martha", "2020-03-01", "spec-case-fred-bloggs:Low:7;spec-case-jones-smith:Low:7", null)]
+    [InlineData(null, "2020-03-01", "spec-case-fred-bloggs:Low:7;spec-case-jones-smith:Low:7", null)]
+    [InlineData("F. Bloggs", "2020-03-01", "spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7", "spec-case-fred-bloggs")]
+    [InlineData("J. Smith", "2020-03-01", "spec-case-jones-smith:Medium:10;spec-case-fred-bloggs:Low:7", "spec-case-jones-smith")]
+    [InlineData("Freddy", null, "spec-case-fred-bloggs:Low:3", null)]
+    [InlineData("Fredd", null, "spec-case-fred-bloggs:Low:3", null)]
+    [InlineData("Jones", null, "spec-case-jones-smith:Low:3", null)]
+    [InlineData("Fred Bloggs", null, "spec-case-fred-bloggs:Low:5", null)]
+    [InlineData("Jones Smith", null, "spec-case-jones-smith:Low:5", null)]
+    [InlineData("Fred Bloggs", "2020-03-01", "spec-case-fred-bloggs:Medium:12;spec-case-jones-smith:Low:7", "spec-case-fred-bloggs")]
+    [InlineData("Jones Smith", "2020-03-01", "spec-case-jones-smith:Medium:12;spec-case-fred-bloggs:Low:7", "spec-case-jones-smith")]
     // Case-insensitive full-name evidence is still exactly 5, never 5+3+3.
-    [InlineData("fReD bLoGgS", null, "spec-case-fred-bloggs:Low:5")]
-    [InlineData("fReD bLoGgS", "2020-03-01", "spec-case-fred-bloggs:Medium:12;spec-case-jones-smith:Low:7")]
+    [InlineData("fReD bLoGgS", null, "spec-case-fred-bloggs:Low:5", null)]
+    [InlineData("fReD bLoGgS", "2020-03-01", "spec-case-fred-bloggs:Medium:12;spec-case-jones-smith:Low:7", "spec-case-fred-bloggs")]
     // Matching just the first name is fuzzy evidence, not an exact full-name match.
-    [InlineData("Fred Harper", "2020-03-01", "spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7")]
-    [InlineData("Freddy Bloggs", "2020-03-01", "spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7")]
-    [InlineData(null, null, "")]
-    [InlineData("Freddy", "2021-03-01", "spec-case-fred-bloggs:Low:3")]
-    public async Task PossibleMatchesHaveExactExpectedScoresAndOrdering(string? name, string? dob, string expected)
+    [InlineData("Fred Harper", "2020-03-01", "spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7", "spec-case-fred-bloggs")]
+    [InlineData("Freddy Bloggs", "2020-03-01", "spec-case-fred-bloggs:Medium:10;spec-case-jones-smith:Low:7", "spec-case-fred-bloggs")]
+    [InlineData(null, null, "", null)]
+    [InlineData("Freddy", "2021-03-01", "spec-case-fred-bloggs:Low:3", null)]
+    public async Task FuzzyEvidenceHasExpectedScoresAndMatchingDecision(
+        string? name, string? dob, string expected, string? expectedCaseId)
     {
+        // Check the scoring independently: folded responses intentionally omit candidates.
+        DateOnly? parsedDob = dob is null ? null : DateOnly.ParseExact(dob, "yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var child = new ExtractedChild(name, null, null, parsedDob, [], []);
+        var scores = Cases()
+            .Select(candidate => PossibleMatchScorer.Score(child, candidate))
+            .Where(match => match.Score > 0)
+            .OrderByDescending(match => match.Score)
+            .ThenBy(match => match.EntityId, StringComparer.Ordinal);
+        Assert.Equal(expected, Matches(scores));
+
         ChildResult result = await MatchAsync(name, dob);
-        Assert.Equal(ChildStatus.PendingMatch, result.Status);
-        Assert.Null(result.MatchedCaseId);
-        Assert.Equal(expected, Matches(result));
+        if (expectedCaseId is not null)
+        {
+            Assert.Equal(ChildStatus.Folded, result.Status);
+            Assert.Equal(expectedCaseId, result.MatchedCaseId);
+            Assert.Empty(result.PossibleCaseMatches);
+        }
+        else
+        {
+            Assert.Equal(ChildStatus.PendingMatch, result.Status);
+            Assert.Null(result.MatchedCaseId);
+            Assert.Equal(expected, Matches(result));
+        }
     }
 
     // Strong identifiers score 10 independently. Contradictory dates of birth
@@ -128,7 +148,9 @@ public sealed class FuzzyMatchingTests
         return await matcher.MatchAsync(Mailbox, email, graph, new EmailExtraction([child]), child, default);
     }
 
-    private static string Matches(ChildResult result) => string.Join(";", result.PossibleCaseMatches.Select(match =>
+    private static string Matches(ChildResult result) => Matches(result.PossibleCaseMatches);
+
+    private static string Matches(IEnumerable<PossibleCaseMatch> matches) => string.Join(";", matches.Select(match =>
         $"{match.EntityId}:{match.ConfidenceBand}:{match.Score?.ToString("0", CultureInfo.InvariantCulture)}"));
 
     private sealed class FixtureLookup(CaseDocument[] cases) : ICaseLookup
