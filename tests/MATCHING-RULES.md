@@ -36,6 +36,7 @@ Score bands: **Low** below 10, **Medium** 10 to 19, **High** 20 and above.
 ## Flow
 
 ```mermaid
+%%{init: {"flowchart": {"wrappingWidth": 320, "htmlLabels": true}}}%%
 flowchart TD
     START(["Email processed: child extracted"]) --> R1{"1. Children extracted?"}
     R1 -- No --> DISC["1. Discard email, log reason"]
@@ -47,14 +48,14 @@ flowchart TD
     R3 -- No --> R3B["3b. PendingMatch, no possible matches"]
 
     R2Q -- Yes --> R4{"4. Strong ID on email?"}
-    R4 -- Yes --> R5{"5. Candidate holds the same type of strong ID?"}
-    R5 -- Yes --> R5Q{"Value differs, or DOB differs while a strong ID matches?"}
+    R4 -- Yes --> R5{"5. Candidate holds same<br/>type of strong ID?"}
+    R5 -- Yes --> R5Q{"Value differs, or DOB differs<br/>while a strong ID matches?"}
     R5Q -- Yes --> R5A["5a. Conflict, list candidates"]
     R5Q -- No --> R5B["5b. Folded, update case"]
     R5 -- No --> R6
     R4 -- No --> R6
 
-    R6{"6. Parent matches a candidate that also matches name or DOB?"}
+    R6{"6. Parent matches a candidate<br/>that also matches name or DOB?"}
     R6 -- Yes --> R6Q{"Exactly one such candidate?"}
     R6Q -- Yes --> R6A["6a. Folded to that candidate"]
     R6Q -- No --> R7
