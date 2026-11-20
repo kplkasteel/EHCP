@@ -350,3 +350,64 @@ Feature: Retrieve email
       | spec-l-dob-no-name      | spec-thread-l13 | Sam Example | sam.example@example.com |           |           |        | 2019-05-05  |          |       |           |                 |                           | PendingMatch   |                         | spec-case-noah-williams:Low:7 |
       | spec-l-dob-parent-email | spec-thread-l14 | Sam Example | sam.example@example.com | Leo       |           |        | 2019-05-05  |          |       |           | Kate Brown      | emma.williams@example.com | Folded         | spec-case-noah-williams |                               |
       | spec-l-dob-parent-name  | spec-thread-l15 | Sam Example | sam.example@example.com | Leo       |           |        | 2019-05-05  |          |       |           | Emma Williams   | other@example.com         | Folded         | spec-case-noah-williams |                               |
+
+
+  Scenario Outline: Email with a child whose identifiers conflict with existing cases lists the matching cases and flags each one
+    Given the mailbox "ehcp-team-shared-1" is selected
+    And the scenario values are
+      | key              | value              |
+      | emailId          | <emailId>          |
+      | conversationId   | <conversationId>   |
+      | parentName       | <parentName>       |
+      | parentEmail      | <parentEmail>      |
+      | childParentName  | <childParentName>  |
+      | childParentEmail | <childParentEmail> |
+      | expectedMatches  | <expectedMatches>  |
+      | expectedStatus   | <expectedStatus>   |
+      | expectedCaseId   | <expectedCaseId>   |
+    And the child identifiers are
+      | identifier  | value         |
+      | childName   | <childName>   |
+      | nhsNumber   | <nhsNumber>   |
+      | caseId      | <caseId>      |
+      | dateOfBirth | <dateOfBirth> |
+      | mosaicId    | <mosaicId>    |
+      | dfeId       | <dfeId>       |
+      | synergyId   | <synergyId>   |
+    And the database is setup to contain "scenario-10-identifier-conflict-data.json"
+    And the database contains cases "scenario-10-identifier-conflict-cases.json"
+    And we setup mock ai extraction to return dataset "scenario-10-identifier-conflict-ai-extract.json"
+    And we setup mock graph api to return dataset "scenario-10-identifier-conflict-graph-email.json"
+    When the email record "scenario-10-identifier-conflict-queue.json" is added to the queue
+    And we wait for the database processing status to be "Processed"
+    When a request is made to the /mailbox/"ehcp-team-shared-1"/emails/"<emailId>" endpoint
+    Then the email record should be retrieved matching "scenario-10-identifier-conflict-expected-result.json"
+    And the email child should have matched case id "<expectedCaseId>"
+    And the case "spec-case-ethan-clarke" should have conflict "<ethanConflict>"
+    And the case "spec-case-mia-roberts" should have conflict "<miaConflict>"
+    And the case "spec-case-zoe-ward" should have conflict "<zoeConflict>"
+    And the case "spec-case-ava-turner" should have conflict "<avaConflict>"
+# Seeded cases: spec-case-ethan-clarke (Ethan Clarke, DOB 2016-04-10, NHS 555 666 7778, Synergy S-5556667, DfE D-60001, Mosaic M-50001, Parent Laura Clarke),
+# spec-case-mia-roberts (Mia Roberts, DOB 2015-11-02, NHS 555 666 8889, Synergy S-5556668, DfE D-60002, Mosaic M-50002, Parent Dan Roberts),
+# spec-case-zoe-ward (Zoe Ward, DOB 2017-01-30, NHS 555 666 9990, Synergy S-5556669, DfE D-60003, Mosaic M-50003, Parent Kim Ward), which must never get a conflict,
+# and spec-case-ava-turner (Ava Turner, DOB 2016-08-15, NHS 555 666 1112, no Synergy, DfE or Mosaic, Parent Paul Turner).
+# A strong ID matches a case but another ID of the same type, or the date of birth, differs: the child is Conflict, the matching cases are listed,
+# and a conflict is added to every matching case, never to the email. The email record has no conflicts field, so the exact email comparison checks that.
+# An ID type the case does not hold is not a conflict: the email folds into the case (row spec-i-missing-id-folds).
+# Case conflict columns: "Band: matchedOn" for the one conflict this email adds to that case, or blank for no conflicts.
+# matchedOn lists the strong IDs that match, then the strong IDs and date of birth that differ. Names are never a conflict.
+# Expected matches are ordered id:ConfidenceBand:score entries separated by semicolons. High is a score of 20 or more, Medium 10 to 19.
+
+
+    Examples:
+      | emailId                    | conversationId  | parentName  | parentEmail             | childName    | nhsNumber    | caseId    | dateOfBirth | mosaicId | dfeId   | synergyId | childParentName | childParentEmail         | expectedStatus | expectedCaseId       | expectedMatches                                                | ethanConflict                                                | miaConflict                                                       | zoeConflict | avaConflict |
+      | spec-i-nhs-synergy-differs | spec-thread-i01 | Sam Example | sam.example@example.com | Ethan Clarke | 555 666 7778 |           | 2016-04-10  |          |         | S-9999999 | Laura Clarke    | laura.clarke@example.com | Conflict       |                      | spec-case-ethan-clarke:High:26                                 | High: NHS number matches; Synergy ID does not match          |                                                                   |             |             |
+      | spec-i-nhs-dfe-differs     | spec-thread-i02 | Sam Example | sam.example@example.com | Ethan Clarke | 555 666 7778 |           | 2016-04-10  |          | D-69999 |           | Laura Clarke    | laura.clarke@example.com | Conflict       |                      | spec-case-ethan-clarke:High:26                                 | High: NHS number matches; DfE ID does not match              |                                                                   |             |             |
+      | spec-i-nhs-mosaic-differs  | spec-thread-i03 | Sam Example | sam.example@example.com | Ethan Clarke | 555 666 7778 |           | 2016-04-10  | M-59999  |         |           | Laura Clarke    | laura.clarke@example.com | Conflict       |                      | spec-case-ethan-clarke:High:26                                 | High: NHS number matches; Mosaic ID does not match           |                                                                   |             |             |
+      | spec-i-dfe-nhs-differs     | spec-thread-i04 | Sam Example | sam.example@example.com | Ethan Clarke | 999 999 9999 |           | 2016-04-10  |          | D-60001 |           | Laura Clarke    | laura.clarke@example.com | Conflict       |                      | spec-case-ethan-clarke:High:26                                 | High: DfE ID matches; NHS number does not match              |                                                                   |             |             |
+      | spec-i-caseid-nhs-differs  | spec-thread-i05 | Sam Example | sam.example@example.com | Ethan Clarke | 999 999 9999 | S-5556667 | 2016-04-10  |          |         |           | Laura Clarke    | laura.clarke@example.com | Conflict       |                      | spec-case-ethan-clarke:High:26                                 | High: Synergy ID matches; NHS number does not match          |                                                                   |             |             |
+      | spec-i-mosaic-nhs-differs  | spec-thread-i06 | Sam Example | sam.example@example.com | Ethan Clarke | 999 999 9999 |           | 2016-04-10  | M-50001  |         |           | Laura Clarke    | laura.clarke@example.com | Conflict       |                      | spec-case-ethan-clarke:High:26                                 | High: Mosaic ID matches; NHS number does not match           |                                                                   |             |             |
+      | spec-i-nhs-dob-differs     | spec-thread-i07 | Sam Example | sam.example@example.com | Ethan Clarke | 555 666 7778 |           | 2016-04-11  |          |         |           | Laura Clarke    | laura.clarke@example.com | Conflict       |                      | spec-case-ethan-clarke:Medium:19                               | Medium: NHS number matches; Date of birth does not match     |                                                                   |             |             |
+      | spec-i-nhs-two-ids-differ  | spec-thread-i08 | Sam Example | sam.example@example.com | Ethan Clarke | 555 666 7778 |           | 2016-04-10  |          | D-69999 | S-9999999 | Laura Clarke    | laura.clarke@example.com | Conflict       |                      | spec-case-ethan-clarke:High:26                                 | High: NHS number matches; Synergy ID and DfE ID do not match |                                                                   |             |             |
+      | spec-i-ids-two-cases       | spec-thread-i09 | Sam Example | sam.example@example.com | Ethan Clarke | 555 666 7778 |           | 2016-04-10  |          | D-60002 |           | Laura Clarke    | laura.clarke@example.com | Conflict       |                      | spec-case-ethan-clarke:High:26;spec-case-mia-roberts:Medium:10 | High: NHS number matches; DfE ID does not match              | Medium: DfE ID matches; NHS number and Date of birth do not match |             |             |
+      | spec-i-missing-id-folds    | spec-thread-i10 | Sam Example | sam.example@example.com | Ava Turner   | 555 666 1112 |           | 2016-08-15  |          |         | S-5551112 | Paul Turner     | paul.turner@example.com  | Folded         | spec-case-ava-turner |                                                                |                                                              |                                                                   |             |             |

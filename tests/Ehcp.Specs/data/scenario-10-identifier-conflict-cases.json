@@ -1,0 +1,97 @@
+[
+  {
+    "id": "spec-case-ethan-clarke",
+    "entityId": "spec-case-ethan-clarke",
+    "name": "Ethan Clarke",
+    "caseId": "S-5556667",
+    "nhsNumber": "555 666 7778",
+    "dateOfBirth": "2016-04-10",
+    "relationships": [
+      {
+        "type": "Parent",
+        "name": "Laura Clarke",
+        "email": "laura.clarke@example.com",
+        "phone": null,
+        "confidenceBand": "High"
+      }
+    ],
+    "attributes": [
+      { "type": "dfeId", "value": "D-60001", "confidenceBand": "High" },
+      { "type": "mosaicId", "value": "M-50001", "confidenceBand": "High" },
+      { "type": "synergyId", "value": "S-5556667", "confidenceBand": "High" }
+    ],
+    "communications": [],
+    "conflicts": []
+  }
+  ,
+  {
+    "id": "spec-case-mia-roberts",
+    "entityId": "spec-case-mia-roberts",
+    "name": "Mia Roberts",
+    "caseId": "S-5556668",
+    "nhsNumber": "555 666 8889",
+    "dateOfBirth": "2015-11-02",
+    "relationships": [
+      {
+        "type": "Parent",
+        "name": "Dan Roberts",
+        "email": "dan.roberts@example.com",
+        "phone": null,
+        "confidenceBand": "High"
+      }
+    ],
+    "attributes": [
+      { "type": "dfeId", "value": "D-60002", "confidenceBand": "High" },
+      { "type": "mosaicId", "value": "M-50002", "confidenceBand": "High" },
+      { "type": "synergyId", "value": "S-5556668", "confidenceBand": "High" }
+    ],
+    "communications": [],
+    "conflicts": []
+  }
+  ,
+  {
+    "id": "spec-case-zoe-ward",
+    "entityId": "spec-case-zoe-ward",
+    "name": "Zoe Ward",
+    "caseId": "S-5556669",
+    "nhsNumber": "555 666 9990",
+    "dateOfBirth": "2017-01-30",
+    "relationships": [
+      {
+        "type": "Parent",
+        "name": "Kim Ward",
+        "email": "kim.ward@example.com",
+        "phone": null,
+        "confidenceBand": "High"
+      }
+    ],
+    "attributes": [
+      { "type": "dfeId", "value": "D-60003", "confidenceBand": "High" },
+      { "type": "mosaicId", "value": "M-50003", "confidenceBand": "High" },
+      { "type": "synergyId", "value": "S-5556669", "confidenceBand": "High" }
+    ],
+    "communications": [],
+    "conflicts": []
+  }
+  ,
+  {
+    "id": "spec-case-ava-turner",
+    "entityId": "spec-case-ava-turner",
+    "name": "Ava Turner",
+    "caseId": null,
+    "nhsNumber": "555 666 1112",
+    "dateOfBirth": "2016-08-15",
+    "relationships": [
+      {
+        "type": "Parent",
+        "name": "Paul Turner",
+        "email": "paul.turner@example.com",
+        "phone": null,
+        "confidenceBand": "High"
+      }
+    ],
+    "attributes": [],
+    "communications": [],
+    "conflicts": []
+  }
+]

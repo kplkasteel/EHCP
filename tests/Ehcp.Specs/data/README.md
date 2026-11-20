@@ -28,6 +28,7 @@ Values in the AI column come from the feature file's Examples table, not from th
 | 7 Parent match | Email with a fuzzy-matching child folds on a parent match and stays pending without one | 5 | Oliver Hughes, Amelia Khan | `scenario-7-low-match-relationships-*` |
 | 8 Identifier differs | Email with a child whose identifier differs from the matched case is a conflict | 6 | Isla Patel, Ivy Chen | `scenario-8-low-match-identifier-mismatch-*` |
 | 9 Date of birth | Email with a child matching on date of birth folds on a parent match and stays pending without one | 4 | Noah Williams, Zara Ahmed | `scenario-9-low-match-dob-*` |
+| 10 Identifier conflicts (US-0008) | Email with a child whose identifiers conflict with existing cases lists the matching cases and flags each one | 10 | Ethan Clarke, Mia Roberts, Zoe Ward, Ava Turner | `scenario-10-identifier-conflict-*` |
 
 `scenario-6-no-dob-match-possible-matches-*` exists here but no scenario in `GetEmail.feature` uses it. Treat it as unused until it is either wired in or removed.
 
@@ -62,6 +63,15 @@ Scenarios 5 and 6 seed the same two cases. Scenarios 7, 8 and 9 each seed their 
 |---|---|---|---|---|---|---|---|---|---|
 | `spec-case-noah-williams` | Noah Williams | 2019-05-05 | 444 555 6667 | S-4445556 | D-50001 | M-40001 | S-4445556 | Emma Williams, emma.williams@example.com | should match |
 | `spec-case-zara-ahmed` | Zara Ahmed | 2016-01-20 | 444 555 7778 | S-4445557 | D-50002 | M-40002 | S-4445557 | Omar Ahmed, omar.ahmed@example.com | must not match |
+
+### Scenario 10 cases
+
+| Case | Name | DOB | NHS | Case ID | DfE | Mosaic | Synergy | Parent | Role |
+|---|---|---|---|---|---|---|---|---|---|
+| `spec-case-ethan-clarke` | Ethan Clarke | 2016-04-10 | 555 666 7778 | S-5556667 | D-60001 | M-50001 | S-5556667 | Laura Clarke, laura.clarke@example.com | conflicts in every conflict example |
+| `spec-case-mia-roberts` | Mia Roberts | 2015-11-02 | 555 666 8889 | S-5556668 | D-60002 | M-50002 | S-5556668 | Dan Roberts, dan.roberts@example.com | conflicts only when the email carries her DfE ID |
+| `spec-case-zoe-ward` | Zoe Ward | 2017-01-30 | 555 666 9990 | S-5556669 | D-60003 | M-50003 | S-5556669 | Kim Ward, kim.ward@example.com | must never get a conflict |
+| `spec-case-ava-turner` | Ava Turner | 2016-08-15 | 555 666 1112 | none | none | none | none | Paul Turner, paul.turner@example.com | holds only an NHS number, so a new Synergy ID is not a conflict |
 
 ## Retrieval, discard and single child
 
@@ -180,6 +190,27 @@ Seeded: Noah Williams (should match), Zara Ahmed (must not match). Date of birth
 | `spec-l-dob-parent-email` | Name Leo; DOB 2019-05-05; parent Kate Brown, emma.williams@example.com | Folded to `spec-case-noah-williams` | 4, 6, 6a |
 | `spec-l-dob-parent-name` | Name Leo; DOB 2019-05-05; parent Emma Williams, other@example.com | Folded to `spec-case-noah-williams` | 4, 6, 6a |
 
+## Scenario 10: identifier conflicts (US-0008)
+
+Seeded: Ethan Clarke, Mia Roberts, Zoe Ward and Ava Turner. A strong ID matches a case, but another ID of the same type or the date of birth differs. The child is Conflict, the matching cases are listed, and a conflict is added to every matching case, never to the email. An ID type the case does not hold is not a conflict, so the last example folds.
+
+Every conflict example uses the name Ethan Clarke, parent Laura Clarke, laura.clarke@example.com, and DOB 2016-04-10 unless shown. Zoe Ward gets no conflict in any example.
+
+| Example | AI-extracted child | Expected | Conflict added to case | Rule path |
+|---|---|---|---|---|
+| `spec-i-nhs-synergy-differs` | NHS 555 666 7778; Synergy S-9999999 | Conflict; Ethan High 26 | Ethan: High, "NHS number matches; Synergy ID does not match" | 4, 5, 5a |
+| `spec-i-nhs-dfe-differs` | NHS 555 666 7778; DfE D-69999 | Conflict; Ethan High 26 | Ethan: High, "NHS number matches; DfE ID does not match" | 4, 5, 5a |
+| `spec-i-nhs-mosaic-differs` | NHS 555 666 7778; Mosaic M-59999 | Conflict; Ethan High 26 | Ethan: High, "NHS number matches; Mosaic ID does not match" | 4, 5, 5a |
+| `spec-i-dfe-nhs-differs` | NHS 999 999 9999; DfE D-60001 | Conflict; Ethan High 26 | Ethan: High, "DfE ID matches; NHS number does not match" | 4, 5, 5a |
+| `spec-i-caseid-nhs-differs` | NHS 999 999 9999; Case ID S-5556667 | Conflict; Ethan High 26 | Ethan: High, "Synergy ID matches; NHS number does not match" | 4, 5, 5a |
+| `spec-i-mosaic-nhs-differs` | NHS 999 999 9999; Mosaic M-50001 | Conflict; Ethan High 26 | Ethan: High, "Mosaic ID matches; NHS number does not match" | 4, 5, 5a |
+| `spec-i-nhs-dob-differs` | NHS 555 666 7778; DOB 2016-04-11 | Conflict; Ethan Medium 19 | Ethan: Medium, "NHS number matches; Date of birth does not match" | 4, 5, 5a |
+| `spec-i-nhs-two-ids-differ` | NHS 555 666 7778; Synergy S-9999999; DfE D-69999 | Conflict; Ethan High 26 | Ethan: High, "NHS number matches; Synergy ID and DfE ID do not match" | 4, 5, 5a |
+| `spec-i-ids-two-cases` | NHS 555 666 7778; DfE D-60002 (Mia's) | Conflict; Ethan High 26, Mia Medium 10 | Ethan: High, "NHS number matches; DfE ID does not match". Mia: Medium, "DfE ID matches; NHS number and Date of birth do not match" | 4, 5, 5a |
+| `spec-i-missing-id-folds` | Name Ava Turner; NHS 555 666 1112; DOB 2016-08-15; Synergy S-5551112; parent Paul Turner, paul.turner@example.com | Folded to `spec-case-ava-turner` | none | 4, 5, 5b |
+
+The conflict check reads each case from the API. `matchedOn` lists the strong IDs that match, then the strong IDs and date of birth that differ, using the names NHS number, Synergy ID, DfE ID, Mosaic ID and Date of birth. Names are never a conflict. The conflict's band is the band of that case's score.
+
 ## Token reference
 
 The `case-creation-*` files are templates. The other fixtures are plain JSON except where noted. Values come from the scenario's `the scenario values are` and `the child identifiers are` tables.
@@ -201,6 +232,8 @@ The `case-creation-*` files are templates. The other fixtures are plain JSON exc
 
 Attributes are compared on `type` and `value` only. An unknown token fails the run.
 
+The step `the case "<caseId>" should have conflict "<expected>"` reads the case from the API and checks its `conflicts` list. The expected value is `Band: matchedOn` for exactly one conflict from this email, or blank for no conflicts. It checks the email ID, band and `matchedOn`, and that `flaggedAt` is present, not its value.
+
 ## Scores used by the fixtures
 
 The Examples' `expectedMatches` scores were set by hand, not calculated by the production scorer. The fixture scores are:
@@ -208,6 +241,7 @@ The Examples' `expectedMatches` scores were set by hand, not calculated by the p
 - Name: exact full name 5, first name or fuzzy name 3, initials 3. Only the best name rule counts.
 - Date of birth: 7.
 - Each strong identifier: 10 (NHS, Synergy, DfE, Mosaic).
+- The child's extracted parent: name 2, email 2.
 
 Resulting bands: Low below 10, Medium 10 to 19, High 20 and above.
 
