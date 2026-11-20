@@ -203,7 +203,7 @@ end
 
 desc 'Run unit and API tests'
 task unit: :build do
-  dotnet 'test', 'tests/Ehcp.Tests', '--no-build'
+  dotnet 'test', 'tests/Ehcp.Tests', '--no-build', '--logger', 'trx', '--results-directory', 'tests/Ehcp.Tests/TestResults'
 end
 
 desc 'Run the API (Azure Functions, port 5100) in the foreground'
