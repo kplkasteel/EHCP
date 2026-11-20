@@ -7,7 +7,7 @@ variables:
   - template: variables/global.yml
 
 steps:
-  - powershell: |
+  - pwsh: |
       Write-Host "Build:            $(Build.BuildId)"
       Write-Host "Agent name:       $(Agent.Name)"
       Write-Host "Agent id:         $(Agent.Id)"
@@ -25,12 +25,16 @@ steps:
       azuriteVersion: ${{ variables.azuriteVersion }}
       funcVersion: ${{ variables.funcVersion }}
 
-  - script: rake go
+  # Sets TestsStarted only as rake go begins, so the publish steps skip if set-up failed first.
+  - pwsh: |
+      Write-Host "##vso[task.setvariable variable=TestsStarted]true"
+      rake go
+      exit $LASTEXITCODE
     displayName: Rake go (build, unit tests, specs)
     timeoutInMinutes: 30
 
   - task: PublishTestResults@2
-    condition: always()
+    condition: and(always(), eq(variables['TestsStarted'], 'true'))
     inputs:
       testResultsFormat: VSTest
       testResultsFiles: '**/TestResults/*.trx'
@@ -38,7 +42,7 @@ steps:
     displayName: Publish test results
 
   - task: PublishPipelineArtifact@1
-    condition: always()
+    condition: and(always(), eq(variables['TestsStarted'], 'true'))
     continueOnError: true
     inputs:
       targetPath: tests/Ehcp.Specs/TestResults
