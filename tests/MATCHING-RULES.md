@@ -89,8 +89,8 @@ flowchart TD
 | 1 | Scenarios "Email with no child information is discarded with a rationale" and "An out-of-office reply is discarded with its rationale" |
 | 3a | spec-c-1, spec-c-2, spec-c-3 (creation outline) |
 | 3b | spec-f-no-evidence, spec-f-different-name-different-dob, scenario "Email with child information extracted but not enough to create a case" |
-| 5a | spec-s-nhs-conflict, spec-s-dfe-conflict, spec-s-mosaic-conflict, spec-s-synergy-attribute-conflict, spec-s-synergy-field-conflict, spec-s-competing-ids, spec-s-same-case-two-ids, spec-s-competing-dob-ids, spec-s-exact-name-wrong-dob, spec-s-exact-name-competing-ids, spec-l-diff-nhs, spec-l-diff-mosaic, spec-l-diff-dfe, spec-l-diff-synergy, spec-l-diff-caseid, spec-l-diff-nhs-parent |
-| 5b | spec-s-nhs-fold, spec-s-dfe-fold, spec-s-mosaic-fold, spec-s-synergy-attribute-fold, spec-s-synergy-field-fold, spec-s-nhs-jones-fold, spec-s-dfe-jones-fold |
+| 5a | spec-s-nhs-conflict, spec-s-dfe-conflict, spec-s-mosaic-conflict, spec-s-synergy-attribute-conflict, spec-s-synergy-field-conflict, spec-s-competing-ids, spec-s-same-case-two-ids, spec-s-competing-dob-ids, spec-s-exact-name-wrong-dob, spec-s-exact-name-competing-ids, spec-l-diff-nhs, spec-l-diff-mosaic, spec-l-diff-dfe, spec-l-diff-synergy, spec-l-diff-caseid, spec-l-diff-nhs-parent, spec-i-nhs-synergy-differs, spec-i-nhs-dfe-differs, spec-i-nhs-mosaic-differs, spec-i-dfe-nhs-differs, spec-i-caseid-nhs-differs, spec-i-mosaic-nhs-differs, spec-i-nhs-dob-differs, spec-i-nhs-two-ids-differ, spec-i-ids-two-cases |
+| 5b | spec-s-nhs-fold, spec-s-dfe-fold, spec-s-mosaic-fold, spec-s-synergy-attribute-fold, spec-s-synergy-field-fold, spec-s-nhs-jones-fold, spec-s-dfe-jones-fold, spec-i-missing-id-folds |
 | 5c | **Not covered** |
 | 6a | spec-l-name-parent-email, spec-l-name-parent-name, spec-l-name-parent-only, spec-l-name-initials-parent, spec-l-dob-parent-email, spec-l-dob-parent-name |
 | 6b | **Not covered** |

@@ -34,7 +34,7 @@ Values in the AI column come from the feature file's Examples table, not from th
 
 ## Seeded cases
 
-Scenarios 5 and 6 seed the same two cases. Scenarios 7, 8 and 9 each seed their own pair: a case the child should match and a case that must not match.
+Scenarios 5 and 6 seed the same two cases. Scenarios 7, 8 and 9 each seed their own pair: a case the child should match and a case that must not match. Scenario 10 seeds four cases, and its table gives each one's role.
 
 ### Scenario 5 and 6 cases (`scenario-5-fuzzy-name-possible-matches-cases.json`)
 
