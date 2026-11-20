@@ -60,16 +60,6 @@ public sealed class MatchingService(
             return Result(child, ChildStatus.PendingMatch);
         }
 
-        // A new identifier is not proof that this is a new child. Before creating
-        // a case, check for an existing child with corroborating name AND parent
-        // information. Conflicting identifiers must not be folded automatically.
-        IReadOnlyList<PossibleCaseMatch> weakMatches =
-            await FindCorroboratedPossibleMatchesAsync(mailboxId, child, ct);
-        if (weakMatches.Count > 0)
-        {
-            return Result(child, ChildStatus.PendingMatch, possibleMatches: weakMatches);
-        }
-
         // Deterministic IDs make retries converge even after a case write succeeds
         // but the final email write fails.
         string identity = identifiers.NhsNumbers.Count > 0 ? "nhs:" + identifiers.NhsNumbers[0]
@@ -210,30 +200,6 @@ public sealed class MatchingService(
                 // Reload and retry when another operation updates the case.
             }
         }
-    }
-
-    private async Task<IReadOnlyList<PossibleCaseMatch>> FindCorroboratedPossibleMatchesAsync(
-        string mailboxId, ExtractedChild child, CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(child.Name) || child.Relationships.Count == 0)
-            return [];
-
-        IReadOnlyList<CaseDocument> candidates =
-            await lookup.FindNameCandidatesAsync(mailboxId, child.Name, ct);
-
-        return candidates
-            .Where(candidate => child.Relationships.Any(incoming =>
-                candidate.Relationships.Any(existing =>
-                    (!string.IsNullOrWhiteSpace(incoming.Name)
-                     && string.Equals(incoming.Name.Trim(), existing.Name.Trim(), StringComparison.OrdinalIgnoreCase))
-                    || (!string.IsNullOrWhiteSpace(incoming.Email)
-                        && string.Equals(incoming.Email.Trim(), existing.Email?.Trim(), StringComparison.OrdinalIgnoreCase)))))
-            .Select(candidate => PossibleMatchScorer.Score(child, candidate))
-            .Where(match => match.Score >= 5)
-            .DistinctBy(match => match.EntityId)
-            .OrderByDescending(match => match.Score)
-            .ThenBy(match => match.EntityId, StringComparer.Ordinal)
-            .ToArray();
     }
 
     private async Task<IReadOnlyList<PossibleCaseMatch>> FindPossibleMatchesAsync(

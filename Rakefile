@@ -231,16 +231,23 @@ task up: :build do
   end
 end
 
+def clear_trx_results
+  Dir.glob('tests/Ehcp.Specs/TestResults/*.trx').each { |file| File.delete(file) }
+end
+
 desc 'Run Reqnroll specs against already running services (see rake up)'
 task specs: [:build, :env] do
   ENV['EHCP_SKIP_HOST_BUILD'] = '1'
-  dotnet 'test', 'tests/Ehcp.Specs', '--no-build', '--logger', 'trx', '--results-directory', 'tests/Ehcp.Specs/TestResults'
+  clear_trx_results
+  dotnet 'test', 'tests/Ehcp.Specs', '--no-build', '--settings', '.runsettings',
+    '--logger', 'trx', '--results-directory', 'tests/Ehcp.Specs/TestResults'
 end
 
 desc 'Run only @wip-tagged Reqnroll specs against already running services (see rake up)'
 task wip: [:build, :env] do
   ENV['EHCP_SKIP_HOST_BUILD'] = '1'
-  dotnet 'test', 'tests/Ehcp.Specs', '--no-build', '--filter', 'Category=wip',
+  clear_trx_results
+  dotnet 'test', 'tests/Ehcp.Specs', '--no-build', '--settings', '.runsettings', '--filter', 'Category=wip',
     '--logger', 'trx', '--results-directory', 'tests/Ehcp.Specs/TestResults'
 end
 

@@ -1,0 +1,78 @@
+parameters:
+  - name: rubyVersion
+    type: string
+  - name: nodeVersion
+    type: string
+  - name: azuriteVersion
+    type: string
+  - name: funcVersion
+    type: string
+
+# The PowerShell lives in .azuredevops/scripts so it can be run and tested locally.
+steps:
+  # Cosmos goes first because the emulator needs 1 to 2 minutes to start from cold.
+  # It launches in the background here and the "Wait for Cosmos DB emulator" step later
+  # blocks until it is ready, so startup overlaps with the tool installs below.
+  - task: PowerShell@2
+    inputs:
+      targetType: filePath
+      filePath: $(Build.SourcesDirectory)/.azuredevops/scripts/start-cosmos.ps1
+      pwsh: true
+    displayName: Start Cosmos DB emulator (background)
+    timeoutInMinutes: 20
+
+  # npm's default global prefix sits on the C: drive (C:\hostedtoolcache\...\node), which is slow:
+  # in a controlled test Azurite plus func took about 302s on C: against about 81s on D:.
+  # Pointing the prefix (installed tools) and cache (downloads) at the D: workspace avoids that.
+  # Set before any Node or npm step so every later npm call picks the variables up.
+  - pwsh: |
+      $dir = Join-Path $env:PIPELINE_WORKSPACE 'npm-global'
+      New-Item -ItemType Directory -Force -Path $dir | Out-Null
+      Write-Host "##vso[task.setvariable variable=NPM_CONFIG_PREFIX]$dir"
+      Write-Host "##vso[task.prependpath]$dir"
+      Write-Host "npm global prefix: $dir"
+      $npmCache = Join-Path $env:PIPELINE_WORKSPACE '.npm'
+      New-Item -ItemType Directory -Force -Path $npmCache | Out-Null
+      Write-Host "##vso[task.setvariable variable=NPM_CONFIG_CACHE]$npmCache"
+      Write-Host "npm download cache: $npmCache"
+    displayName: Set npm global prefix and cache
+
+  - task: UseRubyVersion@0
+    inputs:
+      versionSpec: '${{ parameters.rubyVersion }}'
+    displayName: Use Ruby ${{ parameters.rubyVersion }}
+
+  # The SDK version comes from global.json, the single source of truth for the repo.
+  - task: UseDotNet@2
+    inputs:
+      packageType: sdk
+      useGlobalJson: true
+    displayName: Install .NET SDK from global.json
+
+  - task: UseNode@1
+    inputs:
+      version: '${{ parameters.nodeVersion }}'
+    displayName: Use Node.js ${{ parameters.nodeVersion }}
+
+  - task: PowerShell@2
+    inputs:
+      targetType: filePath
+      filePath: $(Build.SourcesDirectory)/.azuredevops/scripts/install-azurite-func.ps1
+      arguments: -AzuriteVersion '${{ parameters.azuriteVersion }}' -FuncVersion '${{ parameters.funcVersion }}'
+      pwsh: true
+    displayName: Install Azurite and Functions Core Tools
+
+  - task: PowerShell@2
+    inputs:
+      targetType: filePath
+      filePath: $(Build.SourcesDirectory)/.azuredevops/scripts/wait-for-cosmos.ps1
+      pwsh: true
+    displayName: Wait for Cosmos DB emulator
+    timeoutInMinutes: 15
+
+  - task: PowerShell@2
+    inputs:
+      targetType: filePath
+      filePath: $(Build.SourcesDirectory)/.azuredevops/scripts/verify-toolchain.ps1
+      pwsh: true
+    displayName: Verify toolchain
