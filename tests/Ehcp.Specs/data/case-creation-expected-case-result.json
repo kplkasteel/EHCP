@@ -2,7 +2,6 @@
   "id": "{{caseAlias}}",
   "entityId": "{{caseAlias}}",
   "name": {{childName:json}},
-  "caseId": null,
   "nhsNumber": {{nhsNumber:json}},
   "dateOfBirth": {{dateOfBirth:json}},
   "relationships": [

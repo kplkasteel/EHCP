@@ -10,7 +10,6 @@
         "name": null,
         "status": "Unprocessed",
         "nhsNumber": null,
-        "caseId": null,
         "dateOfBirth": null,
         "matchedCaseId": null,
         "possibleCaseMatches": [],
