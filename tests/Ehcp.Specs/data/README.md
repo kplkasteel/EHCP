@@ -24,54 +24,64 @@ Values in the AI column come from the feature file's Examples table, not from th
 | 4 Out-of-office reply | An out-of-office reply is discarded | 1 | none | `scenario-4-out-of-office-*` |
 | Creation | Email with child information extracted and enough information should create a case | 6 | none (`case-creation-data.json` is empty) | `case-creation-*` (tokenised) |
 | 5 Fuzzy names and date of birth | Email with a fuzzy-matching child folds on a Medium or High score and lists Low possible matches | 23 | Fred Bloggs, Jones Smith | `scenario-5-fuzzy-name-possible-matches-*` |
-| 6 Strong identifiers | Strong identifier matching folds a case or returns scored conflicts | 15 | Fred Bloggs, Jones Smith | same as scenario 5 |
+| 6 Strong identifiers | Strong identifier matching folds a case or returns scored conflicts | 17 | Fred Bloggs, Jones Smith | same as scenario 5 |
 | 7 Parent match | Email with a fuzzy-matching child folds on a parent match and stays pending without one | 5 | Oliver Hughes, Amelia Khan | `scenario-7-low-match-relationships-*` |
-| 8 Identifier differs | Email with a child whose identifier differs from the matched case is a conflict | 5 | Isla Patel, Ivy Chen | `scenario-8-low-match-identifier-mismatch-*` |
+| 8 Identifier differs | Email with a child whose identifier differs from the matched case is a conflict | 6 | Isla Patel, Ivy Chen | `scenario-8-low-match-identifier-mismatch-*` |
 | 9 Date of birth | Email with a child matching on date of birth folds on a parent match and stays pending without one | 4 | Noah Williams, Zara Ahmed | `scenario-9-low-match-dob-*` |
-| 10 Identifier conflicts (US-0008) | Email with a child whose identifiers conflict with existing cases lists the matching cases and flags each one | 10 | Ethan Clarke, Mia Roberts, Zoe Ward, Ava Turner | `scenario-10-identifier-conflict-*` |
+| 11 Identifier fold (US-0007) | Email with a child matching an existing case without conflicts folds and adds new information to the case | 13 | Ruby Evans, Iris Webb, Nora Field, Omar Sadiq, Leo Grant | `scenario-11-identifier-fold-*` |
+| 11 Changed information (US-0007) | Email with a child matching an existing case without conflicts folds and keeps the latest information | 17 | Freya Nolan, Hugo Marsh, Lena Frost | `scenario-11-changed-information-*` (email, queue and AI files shared with identifier fold) |
 
 `scenario-6-no-dob-match-possible-matches-*` exists here but no scenario in `GetEmail.feature` uses it. Treat it as unused until it is either wired in or removed.
 
 ## Seeded cases
 
-Scenarios 5 and 6 seed the same two cases. Scenarios 7, 8 and 9 each seed their own pair: a case the child should match and a case that must not match. Scenario 10 seeds four cases, and its table gives each one's role.
+Scenarios 5 and 6 seed the same two cases. Scenarios 7, 8 and 9 each seed their own pair: a case the child should match and a case that must not match.
 
 ### Scenario 5 and 6 cases (`scenario-5-fuzzy-name-possible-matches-cases.json`)
 
-| Case | Name | DOB | NHS | DfE | Mosaic | Synergy | Parent |
-|---|---|---|---|---|---|---|---|
-| `spec-case-fred-bloggs` | Fred Bloggs | 2020-03-01 | 123 456 7890 | D-20001 | M-10001 | S-1234567 | none |
-| `spec-case-jones-smith` | Jones Smith | 2020-03-01 | 456 789 0123 | D-20002 | M-10002 | S-7654321 | none |
+| Case | Name | DOB | NHS | Case ID | DfE | Mosaic | Synergy | Parent |
+|---|---|---|---|---|---|---|---|---|
+| `spec-case-fred-bloggs` | Fred Bloggs | 2020-03-01 | 123 456 7890 | S-1234567 | D-20001 | M-10001 | S-1234567 | none |
+| `spec-case-jones-smith` | Jones Smith | 2020-03-01 | 456 789 0123 | S-7654321 | D-20002 | M-10002 | S-7654321 | none |
 
 ### Scenario 7 cases
 
-| Case | Name | DOB | NHS | DfE | Mosaic | Synergy | Parent | Role |
-|---|---|---|---|---|---|---|---|---|
-| `spec-case-oliver-hughes` | Oliver Hughes | 2018-06-12 | 222 333 4445 | D-30001 | M-20001 | S-2223334 | Grace Hughes, grace.hughes@example.com | should match |
-| `spec-case-amelia-khan` | Amelia Khan | 2018-06-12 | 222 333 5556 | D-30002 | M-20002 | S-2223335 | Sara Khan, sara.khan@example.com | must not match |
+| Case | Name | DOB | NHS | Case ID | DfE | Mosaic | Synergy | Parent | Role |
+|---|---|---|---|---|---|---|---|---|---|
+| `spec-case-oliver-hughes` | Oliver Hughes | 2018-06-12 | 222 333 4445 | S-2223334 | D-30001 | M-20001 | S-2223334 | Grace Hughes, grace.hughes@example.com | should match |
+| `spec-case-amelia-khan` | Amelia Khan | 2018-06-12 | 222 333 5556 | S-2223335 | D-30002 | M-20002 | S-2223335 | Sara Khan, sara.khan@example.com | must not match |
 
 ### Scenario 8 cases
 
-| Case | Name | DOB | NHS | DfE | Mosaic | Synergy | Parent | Role |
-|---|---|---|---|---|---|---|---|---|
-| `spec-case-isla-patel` | Isla Patel | 2017-09-23 | 333 444 5556 | D-40001 | M-30001 | S-3334445 | Raj Patel, raj.patel@example.com | should match |
-| `spec-case-ivy-chen` | Ivy Chen | 2017-09-23 | 333 444 6667 | D-40002 | M-30002 | S-3334446 | Lin Chen, lin.chen@example.com | must not match |
+| Case | Name | DOB | NHS | Case ID | DfE | Mosaic | Synergy | Parent | Role |
+|---|---|---|---|---|---|---|---|---|---|
+| `spec-case-isla-patel` | Isla Patel | 2017-09-23 | 333 444 5556 | S-3334445 | D-40001 | M-30001 | S-3334445 | Raj Patel, raj.patel@example.com | should match |
+| `spec-case-ivy-chen` | Ivy Chen | 2017-09-23 | 333 444 6667 | S-3334446 | D-40002 | M-30002 | S-3334446 | Lin Chen, lin.chen@example.com | must not match |
 
 ### Scenario 9 cases
 
-| Case | Name | DOB | NHS | DfE | Mosaic | Synergy | Parent | Role |
-|---|---|---|---|---|---|---|---|---|
-| `spec-case-noah-williams` | Noah Williams | 2019-05-05 | 444 555 6667 | D-50001 | M-40001 | S-4445556 | Emma Williams, emma.williams@example.com | should match |
-| `spec-case-zara-ahmed` | Zara Ahmed | 2016-01-20 | 444 555 7778 | D-50002 | M-40002 | S-4445557 | Omar Ahmed, omar.ahmed@example.com | must not match |
+| Case | Name | DOB | NHS | Case ID | DfE | Mosaic | Synergy | Parent | Role |
+|---|---|---|---|---|---|---|---|---|---|
+| `spec-case-noah-williams` | Noah Williams | 2019-05-05 | 444 555 6667 | S-4445556 | D-50001 | M-40001 | S-4445556 | Emma Williams, emma.williams@example.com | should match |
+| `spec-case-zara-ahmed` | Zara Ahmed | 2016-01-20 | 444 555 7778 | S-4445557 | D-50002 | M-40002 | S-4445557 | Omar Ahmed, omar.ahmed@example.com | must not match |
 
-### Scenario 10 cases
+### Scenario 11 cases
 
-| Case | Name | DOB | NHS | DfE | Mosaic | Synergy | Parent | Role |
-|---|---|---|---|---|---|---|---|---|
-| `spec-case-ethan-clarke` | Ethan Clarke | 2016-04-10 | 555 666 7778 | D-60001 | M-50001 | S-5556667 | Laura Clarke, laura.clarke@example.com | conflicts in every conflict example |
-| `spec-case-mia-roberts` | Mia Roberts | 2015-11-02 | 555 666 8889 | D-60002 | M-50002 | S-5556668 | Dan Roberts, dan.roberts@example.com | conflicts only when the email carries her DfE ID |
-| `spec-case-zoe-ward` | Zoe Ward | 2017-01-30 | 555 666 9990 | D-60003 | M-50003 | S-5556669 | Kim Ward, kim.ward@example.com | must never get a conflict |
-| `spec-case-ava-turner` | Ava Turner | 2016-08-15 | 555 666 1112 | none | none | none | Paul Turner, paul.turner@example.com | holds only an NHS number, so a new Synergy ID is not a conflict |
+| Case | Name | DOB | NHS | DfE | Mosaic | Synergy | Other | Parent | Role |
+|---|---|---|---|---|---|---|---|---|---|
+| `spec-case-ruby-evans` | Ruby Evans | none | 666 777 8889 | none | M-60001 | S-6667778 | GP Dr Shah; one earlier email | Tom Evans, tom.evans@example.com | main fold case |
+| `spec-case-iris-webb` | Iris Webb | 2013-12-05 | none | none | M-60004 | S-6667781 | none | Carl Webb, carl.webb@example.com | has no NHS number |
+| `spec-case-nora-field` | Nora Field | 2014-06-20 | 777 888 1112 | D-70003 | none | none | address 1 Oak Road; GP Dr Lane; sibling Max Field | Ann Field, ann.field@example.com | shares a DOB with Omar |
+| `spec-case-omar-sadiq` | Omar Sadiq | 2014-06-20 | 777 888 2223 | D-70004 | none | none | none | Hana Sadiq, hana.sadiq@example.com | must never change |
+| `spec-case-leo-grant` | Leo Grant | 2015-03-08 | 666 777 9990 | D-70005 | M-60005 | S-6667780 | none | Nina Grant, nina.grant@example.com | must never change |
+
+### Scenario 11 changed information cases
+
+| Case | Name | DOB | NHS | From the 2026-10-01 email | From the 2026-12-01 email | Role |
+|---|---|---|---|---|---|---|
+| `spec-case-freya-nolan` | Freya Nolan | 2014-09-02 | 555 666 7771 | DfE D-80001; school Oakfield Primary; address 1 Elm Road; GP Dr Shah; parent Paula Nolan, paula.old@example.com, 07700 900101 | none | older than the email |
+| `spec-case-hugo-marsh` | Hugo Marsh | 2013-04-17 | 555 666 7782 | DfE D-80002; GP Dr Lane | school Hillside Academy; parent Rita Marsh, rita.new@example.com, 07700 900202 | partly newer than the email |
+| `spec-case-lena-frost` | Lena Frost | 2012-11-23 | 555 666 7793 | none | none | must never change |
 
 ## Retrieval, discard and single child
 
@@ -140,12 +150,14 @@ Seeded: Fred Bloggs and Jones Smith. Every example has a strong ID, so it goes t
 | `spec-s-dfe-fold` | Name Fred Bloggs; DfE D-20001; DOB 2020-03-01 | Folded to `spec-case-fred-bloggs` | 4, 5, 5b |
 | `spec-s-mosaic-fold` | Name Fred Bloggs; Mosaic M-10001; DOB 2020-03-01 | Folded to `spec-case-fred-bloggs` | 4, 5, 5b |
 | `spec-s-synergy-attribute-fold` | Name Fred Bloggs; Synergy S-1234567; DOB 2020-03-01 | Folded to `spec-case-fred-bloggs` | 4, 5, 5b |
+| `spec-s-synergy-field-fold` | Name Fred Bloggs; Case ID S-1234567; DOB 2020-03-01 | Folded to `spec-case-fred-bloggs` | 4, 5, 5b |
 | `spec-s-nhs-jones-fold` | Name Jones Smith; NHS 456 789 0123 | Folded to `spec-case-jones-smith` | 4, 5, 5b |
 | `spec-s-dfe-jones-fold` | Name Jones Smith; DfE D-20002 | Folded to `spec-case-jones-smith` | 4, 5, 5b |
 | `spec-s-nhs-conflict` | Name Alice; NHS 123 456 7890; DOB 2021-03-01 | Conflict; Fred Medium 10 | 4, 5, 5a |
 | `spec-s-dfe-conflict` | Name Alice; DfE D-20001; DOB 2021-03-01 | Conflict; Fred Medium 10 | 4, 5, 5a |
 | `spec-s-mosaic-conflict` | Name Alice; Mosaic M-10001; DOB 2021-03-01 | Conflict; Fred Medium 10 | 4, 5, 5a |
 | `spec-s-synergy-attribute-conflict` | Name Alice; Synergy S-1234567; DOB 2021-03-01 | Conflict; Fred Medium 10 | 4, 5, 5a |
+| `spec-s-synergy-field-conflict` | Name Alice; Case ID S-1234567; DOB 2021-03-01 | Conflict; Fred Medium 10 | 4, 5, 5a |
 | `spec-s-competing-ids` | Name Alice; NHS 123 456 7890 (Fred); DfE D-20002 (Jones) | Conflict; Fred Medium 10, Jones Medium 10 | 4, 5, 5a |
 | `spec-s-same-case-two-ids` | Name Alice; NHS 123 456 7890; DfE D-20001; DOB 2021-03-01 | Conflict; Fred High 20 | 4, 5, 5a |
 | `spec-s-competing-dob-ids` | Name Alice; NHS 123 456 7890 (Fred); DfE D-20002 (Jones); DOB 2020-03-01 | Conflict; Fred Medium 17, Jones Medium 17 | 4, 5, 5a |
@@ -174,6 +186,7 @@ Seeded: Isla Patel. Every example has a strong ID that differs from Isla's value
 | `spec-l-diff-mosaic` | Name Isla; Mosaic M-39999; parent Raj Patel, raj.patel@example.com | Conflict; Isla Patel Low 7 | 4, 5, 5a |
 | `spec-l-diff-dfe` | Name Isla; DfE D-49999; parent Raj Patel, raj.patel@example.com | Conflict; Isla Patel Low 7 | 4, 5, 5a |
 | `spec-l-diff-synergy` | Name Isla; Synergy S-3999999; parent Raj Patel, raj.patel@example.com | Conflict; Isla Patel Low 7 | 4, 5, 5a |
+| `spec-l-diff-caseid` | Name Isla; Case ID S-3999999; parent Raj Patel, raj.patel@example.com | Conflict; Isla Patel Low 7 | 4, 5, 5a |
 | `spec-l-diff-nhs-parent` | Name Isla; NHS 999 888 7776; parent Raj Patel, other@example.com | Conflict; Isla Patel Low 5 | 4, 5, 5a |
 
 ## Scenario 9: date of birth
@@ -187,26 +200,49 @@ Seeded: Noah Williams (should match), Zara Ahmed (must not match). Date of birth
 | `spec-l-dob-parent-email` | Name Leo; DOB 2019-05-05; parent Kate Brown, emma.williams@example.com | Folded to `spec-case-noah-williams` | 4, 6, 6a |
 | `spec-l-dob-parent-name` | Name Leo; DOB 2019-05-05; parent Emma Williams, other@example.com | Folded to `spec-case-noah-williams` | 4, 6, 6a |
 
-## Scenario 10: identifier conflicts (US-0008)
+## Scenario 11: identifier fold (US-0007)
 
-Seeded: Ethan Clarke, Mia Roberts, Zoe Ward and Ava Turner. A strong ID matches a case, but another ID of the same type or the date of birth differs. The child is Conflict, the matching cases are listed, and a conflict is added to every matching case, never to the email. An ID type the case does not hold is not a conflict, so the last example folds.
+Seeded: the five scenario 11 cases. Every example is Folded with no possible matches. The case after the fold is compared with `scenario-11-identifier-fold-<expectedCase>-expected-case.json`, and Leo Grant and Omar Sadiq must be unchanged. Added relationships and attributes carry the source email ID. Changed information is covered in the next section.
 
-Every conflict example uses the name Ethan Clarke, parent Laura Clarke, laura.clarke@example.com, and DOB 2016-04-10 unless shown. Zoe Ward gets no conflict in any example.
-
-| Example | AI-extracted child | Expected | Conflict added to case | Rule path |
+| Example | AI-extracted child | Folds into | Case change besides the email | Rule path |
 |---|---|---|---|---|
-| `spec-i-nhs-synergy-differs` | NHS 555 666 7778; Synergy S-9999999 | Conflict; Ethan High 26 | Ethan: High, "NHS number matches; Synergy ID does not match" | 4, 5, 5a |
-| `spec-i-nhs-dfe-differs` | NHS 555 666 7778; DfE D-69999 | Conflict; Ethan High 26 | Ethan: High, "NHS number matches; DfE ID does not match" | 4, 5, 5a |
-| `spec-i-nhs-mosaic-differs` | NHS 555 666 7778; Mosaic M-59999 | Conflict; Ethan High 26 | Ethan: High, "NHS number matches; Mosaic ID does not match" | 4, 5, 5a |
-| `spec-i-dfe-nhs-differs` | NHS 999 999 9999; DfE D-60001 | Conflict; Ethan High 26 | Ethan: High, "DfE ID matches; NHS number does not match" | 4, 5, 5a |
-| `spec-i-synergy-nhs-differs` | NHS 999 999 9999; Synergy S-5556667 | Conflict; Ethan High 26 | Ethan: High, "Synergy ID matches; NHS number does not match" | 4, 5, 5a |
-| `spec-i-mosaic-nhs-differs` | NHS 999 999 9999; Mosaic M-50001 | Conflict; Ethan High 26 | Ethan: High, "Mosaic ID matches; NHS number does not match" | 4, 5, 5a |
-| `spec-i-nhs-dob-differs` | NHS 555 666 7778; DOB 2016-04-11 | Conflict; Ethan Medium 19 | Ethan: Medium, "NHS number matches; Date of birth does not match" | 4, 5, 5a |
-| `spec-i-nhs-two-ids-differ` | NHS 555 666 7778; Synergy S-9999999; DfE D-69999 | Conflict; Ethan High 26 | Ethan: High, "NHS number matches; Synergy ID and DfE ID do not match" | 4, 5, 5a |
-| `spec-i-ids-two-cases` | NHS 555 666 7778; DfE D-60002 (Mia's) | Conflict; Ethan High 26, Mia Medium 10 | Ethan: High, "NHS number matches; DfE ID does not match". Mia: Medium, "DfE ID matches; NHS number and Date of birth do not match" | 4, 5, 5a |
-| `spec-i-missing-id-folds` | Name Ava Turner; NHS 555 666 1112; DOB 2016-08-15; Synergy S-5551112; parent Paul Turner, paul.turner@example.com | Folded to `spec-case-ava-turner` | none | 4, 5, 5b |
+| `spec-u-nhs` | Ruby's NHS | `spec-case-ruby-evans` | email added, nothing else changes | 4, 5, 5b |
+| `spec-u-synergy` | Ruby's Synergy | `spec-case-ruby-evans` | email added, nothing else changes | 4, 5, 5b |
+| `spec-u-mosaic` | Ruby's Mosaic | `spec-case-ruby-evans` | email added, nothing else changes | 4, 5, 5b |
+| `spec-u-new-dob` | Ruby's NHS; DOB 2015-07-19 | `spec-case-ruby-evans` | DOB filled in | 4, 5, 5b |
+| `spec-u-new-parent` | Ruby's NHS; parents Tom Evans and Megan Evans | `spec-case-ruby-evans` | Megan added, Tom not added twice | 4, 5, 5b |
+| `spec-u-new-attributes` | Ruby's NHS; DfE D-70001; school; GP Dr Shah | `spec-case-ruby-evans` | DfE and school added, GP not added twice | 4, 5, 5b |
+| `spec-u-all-new` | Ruby's NHS and all of the new information above | `spec-case-ruby-evans` | all added once | 4, 5, 5b |
+| `spec-u-fills-nhs` | Iris's Mosaic; NHS 666 777 1110 | `spec-case-iris-webb` | NHS number filled in | 4, 5, 5b |
+| `spec-u-parent-match` | Name Ruby Evans; parent Tom Evans; school | `spec-case-ruby-evans` | school added | 4, 6, 6a |
+| `spec-u-new-id-parent-match` | Name Ruby Evans; parent Tom Evans; DfE D-70001, held by no case | `spec-case-ruby-evans` | DfE added, no new case | 4, 5, 6, 6a |
+| `spec-u-one-high` | Name Nora Field; DOB; address; GP; sibling; school (Nora High 21, Omar Low 7) | `spec-case-nora-field` | school added | 4, 6c, 7a |
+| `spec-u-one-medium` | Name Nora Field; DOB; parent Joe Field (Nora Medium 12, Omar Low 7) | `spec-case-nora-field` | Joe added | 4, 6c, 7d |
+| `spec-u-single-medium` | Name Iris Webb; DOB; school (Iris Medium 12) | `spec-case-iris-webb` | school added | 4, 6c, 8b |
 
-The conflict check reads each case from the API. `matchedOn` lists the strong IDs that match, then the strong IDs and date of birth that differ, using the names NHS number, Synergy ID, DfE ID, Mosaic ID and Date of birth. Names are never a conflict. The conflict's band is the band of that case's score.
+## Scenario 11: changed information (US-0007)
+
+The email is dated 2026-11-01 and every example is Folded. The latest value wins by email date. A replaced value carries the new source email ID. The same relationship type and name is the same person. A case's name has no source email, so its date is the case's latest communication.
+
+| Example | Folds into | Case change |
+|---|---|---|
+| `spec-w-dfe` | `spec-case-freya-nolan` | email added only |
+| `spec-w-same-information` | `spec-case-freya-nolan` | email added only, nothing added twice |
+| `spec-w-new-school` | `spec-case-freya-nolan` | school replaced |
+| `spec-w-new-address-gp` | `spec-case-freya-nolan` | address and GP replaced |
+| `spec-w-new-parent-email` | `spec-case-freya-nolan` | parent email replaced, still one parent |
+| `spec-w-new-parent-phone` | `spec-case-freya-nolan` | parent phone replaced, still one parent |
+| `spec-w-new-name` | `spec-case-freya-nolan` | name replaced |
+| `spec-w-all-changed` | `spec-case-freya-nolan` | name, school, address, GP and parent replaced |
+| `spec-w-changed-and-new` | `spec-case-freya-nolan` | school replaced, sibling added |
+| `spec-w-left-out` | `spec-case-freya-nolan` | email added only, nothing blanked, still one parent |
+| `spec-w-parent-match` | `spec-case-freya-nolan` | parent email replaced (6a) |
+| `spec-w-no-identifier` | `spec-case-freya-nolan` | school replaced (8b, Medium 12) |
+| `spec-w-older-school` | `spec-case-hugo-marsh` | newer school kept |
+| `spec-w-older-parent` | `spec-case-hugo-marsh` | newer parent email and phone kept |
+| `spec-w-older-name` | `spec-case-hugo-marsh` | name kept |
+| `spec-w-older-new-address` | `spec-case-hugo-marsh` | missing address added |
+| `spec-w-older-and-newer` | `spec-case-hugo-marsh` | newer school kept, older GP replaced |
 
 ## Token reference
 
@@ -215,11 +251,11 @@ The `case-creation-*` files are templates. The other fixtures are plain JSON exc
 | Token | Form | Source |
 |---|---|---|
 | `{{emailId}}`, `{{conversationId}}`, `{{parentName}}`, `{{parentEmail}}` | text, inside quotes | scenario values |
-| `{{childName:json}}`, `{{nhsNumber:json}}`, `{{dateOfBirth:json}}` | JSON literal, `null` when blank | child identifiers |
+| `{{childName:json}}`, `{{nhsNumber:json}}`, `{{caseId:json}}`, `{{dateOfBirth:json}}` | JSON literal, `null` when blank | child identifiers |
 | `{{attributes}}` | JSON array with `confidenceBand`, for the AI-extract input | other identifiers |
 | `{{expectedAttributes}}` | JSON array with `type` and `value` only, for the expected output | other identifiers |
-| `{{childRelationships}}` | one `parent` relationship, or `[]` | `childParentName` / `childParentEmail` |
-| `{{expectedRelationships}}` | same relationship as the API returns it (`confidenceBand: VeryLow`), or `[]` | `childParentName` / `childParentEmail` |
+| `{{childRelationships}}` | up to two `parent` relationships, or `[]` | `childParentName` / `childParentEmail`, `childParent2Name` / `childParent2Email` |
+| `{{expectedRelationships}}` | same relationships as the API returns them (`confidenceBand: VeryLow`), or `[]` | same as above |
 | `{{expectedMatches}}` | ordered `entityId:ConfidenceBand:score` list, or `[]` when blank | `expectedMatches` column |
 | `{{expectedStatus}}` | `PendingMatch` by default | `expectedStatus` column |
 | `{{expectedCaseId:json}}` | matched case ID, or `null` | `expectedCaseId` column |
@@ -229,8 +265,6 @@ The `case-creation-*` files are templates. The other fixtures are plain JSON exc
 
 Attributes are compared on `type` and `value` only. An unknown token fails the run.
 
-The step `the case "<caseId>" should have conflict "<expected>"` reads the case from the API and checks its `conflicts` list. The expected value is `Band: matchedOn` for exactly one conflict from this email, or blank for no conflicts. It checks the email ID, band and `matchedOn`, and that `flaggedAt` is present, not its value.
-
 ## Scores used by the fixtures
 
 The Examples' `expectedMatches` scores were set by hand, not calculated by the production scorer. The fixture scores are:
@@ -238,7 +272,6 @@ The Examples' `expectedMatches` scores were set by hand, not calculated by the p
 - Name: exact full name 5, first name or fuzzy name 3, initials 3. Only the best name rule counts.
 - Date of birth: 7.
 - Each strong identifier: 10 (NHS, Synergy, DfE, Mosaic).
-- The child's extracted parent: name 2, email 2.
 
 Resulting bands: Low below 10, Medium 10 to 19, High 20 and above.
 
