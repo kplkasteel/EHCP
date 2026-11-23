@@ -1,5 +1,10 @@
 trigger: none
 
+# Test: queue new runs behind the running one instead of cancelling it.
+concurrency:
+  group: pr-validation
+  cancelInProgress: false
+
 pool:
   vmImage: windows-latest
 
