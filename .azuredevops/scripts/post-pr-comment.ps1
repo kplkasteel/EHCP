@@ -30,7 +30,14 @@ $lines = @(
   '',
   '| Suite | Result | Passed | Failed | Total | Duration |',
   '|---|---|---|---|---|---|',
-  $(switch ($summary.build) { 'passed' { '| Build | ✅ Passed | | | | |' } 'failed' { '| Build | ❌ Failed | | | | |' } default { '| Build | ⚠️ Not run | | | | |' } }),
+  $(
+    $buildTime = if ($summary.build_duration_s) { "$($summary.build_duration_s) s" } else { '' }
+    switch ($summary.build) {
+      'passed' { "| Build | ✅ Passed | | | | $buildTime |" }
+      'failed' { "| Build | ❌ Failed | | | | $buildTime |" }
+      default  { '| Build | ⚠️ Not run | | | | |' }
+    }
+  ),
   (Format-Row 'Unit tests' $summary.unit),
   (Format-Row 'Specs' $summary.specs)
 )
@@ -73,7 +80,7 @@ try {
   # With -TidyOldThreads, earlier results that have no replies are deleted instead. Threads with replies are
   # always kept, so a person's discussion isn't lost.
   $previous = @($threads | Where-Object { $_.comments.content -like "*$marker*" })
-  $kept = 0; $removed = 0
+  $kept = 0; $skipped = 0; $removed = 0
   foreach ($thread in $previous) {
     $hasReplies = @($thread.comments | Where-Object { $_.content -notlike "*$marker*" -and $_.isDeleted -ne $true }).Count -gt 0
     if ($TidyOldThreads -and -not $hasReplies) {
@@ -82,16 +89,21 @@ try {
       }
       $removed++
     } else {
-      # Reply and resolve once. A thread already resolved by an earlier run is left alone.
-      if ($thread.status -ne 'fixed') {
+      # Reply and resolve once. A thread that already has the superseded reply is left alone.
+      # Checked by the reply text, not the thread status: a passing run's comment is already resolved,
+      # but still needs the reply.
+      $alreadySuperseded = @($thread.comments | Where-Object { $_.content -like '*superseded this result*' }).Count -gt 0
+      if ($alreadySuperseded) {
+        $skipped++
+      } else {
         $reply = @{ content = 'A newer pipeline run has superseded this result. See the latest comment.'; parentCommentId = 0; commentType = 1 }
         $null = Invoke-RestMethod -Method Post -Uri "$base/threads/$($thread.id)/comments?api-version=7.1" -Headers $headers -Body ($reply | ConvertTo-Json)
         $null = Invoke-RestMethod -Method Patch -Uri "$base/threads/$($thread.id)?api-version=7.1" -Headers $headers -Body (@{ status = 2 } | ConvertTo-Json)
+        $kept++
       }
-      $kept++
     }
   }
-  Write-Host "Earlier threads: $kept replied to and resolved, $removed deleted."
+  Write-Host "Earlier threads: $kept replied to and resolved, $skipped already superseded, $removed deleted."
 
   $new = @{ comments = @(@{ parentCommentId = 0; content = $body; commentType = 1 }); status = $threadStatus }
   $null = Invoke-RestMethod -Method Post -Uri "$base/threads?api-version=7.1" -Headers $headers -Body ($new | ConvertTo-Json -Depth 5)

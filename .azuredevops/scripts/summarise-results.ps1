@@ -36,10 +36,21 @@ $overall = switch ($OverallStatus) { 'Succeeded' { 'passed' } 'passed' { 'passed
 
 # Build: passed if unit tests started (they depend on a successful build), failed if rake started but the build did not, otherwise not run.
 $build = if ($UnitStarted -eq 'true') { 'passed' } elseif ($RakeStarted -eq 'true') { 'failed' } else { 'not run' }
+# Build duration, from the "Time Elapsed" line that dotnet writes at the end of build.log.
+$buildSeconds = $null
+$buildLog = Join-Path (Split-Path $OutFile) 'build\build.log'
+if (Test-Path $buildLog) {
+  $m = Select-String -Path $buildLog -Pattern 'Time Elapsed (\d+):(\d+):(\d+(\.\d+)?)' | Select-Object -Last 1
+  if ($m) {
+    $g = $m.Matches[0].Groups
+    $buildSeconds = [math]::Round([double]$g[1].Value * 3600 + [double]$g[2].Value * 60 + [double]$g[3].Value, 1)
+  }
+}
 
 $summary = [ordered]@{
   overall = $overall
   build   = $build
+  build_duration_s = $buildSeconds
   unit    = Get-RunSummary -Folder (Join-Path $PSScriptRoot '..\..\tests\Ehcp.Tests\TestResults')
   specs   = Get-RunSummary -Folder (Join-Path $PSScriptRoot '..\..\tests\Ehcp.Specs\TestResults')
 }
