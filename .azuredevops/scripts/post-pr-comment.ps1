@@ -39,7 +39,7 @@ if ($failing) {
 $lines += ''
 $prUrl = "$($env:SYSTEM_COLLECTIONURI)$($env:SYSTEM_TEAMPROJECT)/_git/$($env:BUILD_REPOSITORY_NAME)/pullrequest/$($env:SYSTEM_PULLREQUEST_PULLREQUESTID)"
 $runUrl = "$($env:SYSTEM_COLLECTIONURI)$($env:SYSTEM_TEAMPROJECT)/_build/results?buildId=$($env:BUILD_BUILDID)"
-$lines += "[View the run]($runUrl) | [View the pull request]($prUrl)"
+$lines += "[View the run]($runUrl)"
 Write-Host "Pull request: $prUrl"
 $lines += ''
 $lines += if ($passed) {
