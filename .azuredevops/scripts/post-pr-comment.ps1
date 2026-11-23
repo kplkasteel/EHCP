@@ -63,9 +63,9 @@ $lines = @(
   "**$title**",
   '',
   '| Suite | Result | Passed | Failed | Total | Duration |',
-  '|---|---|---|---|---|---|',
-  $buildRow
+  '|---|---|---|---|---|---|'
 ) + $toolRows + @(
+  $buildRow,
   (Format-Row 'Unit tests' $summary.unit),
   (Format-Row 'Specs' $summary.specs)
 )
