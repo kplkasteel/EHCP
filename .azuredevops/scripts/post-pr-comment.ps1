@@ -66,20 +66,32 @@ $headers = @{ Authorization = "Bearer $env:SYSTEM_ACCESSTOKEN"; 'Content-Type' =
 
 try {
   $threads = (Invoke-RestMethod -Uri "$base/threads?api-version=7.1" -Headers $headers).value
-  $existing = $threads | Where-Object { $_.comments.content -like "*$marker*" } | Select-Object -First 1
-
-  if ($existing) {
-    $commentId = ($existing.comments | Where-Object { $_.content -like "*$marker*" } | Select-Object -First 1).id
-    $null = Invoke-RestMethod -Method Patch -Uri "$base/threads/$($existing.id)/comments/$commentId`?api-version=7.1" `
-      -Headers $headers -Body (@{ content = $body } | ConvertTo-Json)
-    $null = Invoke-RestMethod -Method Patch -Uri "$base/threads/$($existing.id)?api-version=7.1" `
-      -Headers $headers -Body (@{ status = $threadStatus } | ConvertTo-Json)
-    Write-Host "Updated PR comment (thread $($existing.id))."
-  } else {
-    $new = @{ comments = @(@{ parentCommentId = 0; content = $body; commentType = 1 }); status = $threadStatus }
-    $null = Invoke-RestMethod -Method Post -Uri "$base/threads?api-version=7.1" -Headers $headers -Body ($new | ConvertTo-Json -Depth 5)
-    Write-Host 'Posted PR comment.'
+  # Earlier results: a thread with replies is kept, and is pointed at the new comment and resolved.
+  # A thread with no replies is removed.
+  $previous = @($threads | Where-Object { $_.comments.content -like "*$marker*" })
+  $kept = 0; $removed = 0
+  foreach ($thread in $previous) {
+    $hasReplies = @($thread.comments | Where-Object { $_.content -notlike "*$marker*" -and $_.isDeleted -ne $true }).Count -gt 0
+    if ($hasReplies) {
+      # Reply and resolve once. A thread already resolved by an earlier run is left alone.
+      if ($thread.status -ne 'fixed') {
+        $reply = @{ content = 'A new comment with the latest test results has been created below.'; parentCommentId = 0; commentType = 1 }
+        $null = Invoke-RestMethod -Method Post -Uri "$base/threads/$($thread.id)/comments?api-version=7.1" -Headers $headers -Body ($reply | ConvertTo-Json)
+        $null = Invoke-RestMethod -Method Patch -Uri "$base/threads/$($thread.id)?api-version=7.1" -Headers $headers -Body (@{ status = 2 } | ConvertTo-Json)
+      }
+      $kept++
+    } else {
+      foreach ($c in ($thread.comments | Where-Object { $_.content -like "*$marker*" })) {
+        $null = Invoke-RestMethod -Method Delete -Uri "$base/threads/$($thread.id)/comments/$($c.id)?api-version=7.1" -Headers $headers
+      }
+      $removed++
+    }
   }
+  Write-Host "Earlier threads: $kept with replies (replied to and resolved), $removed removed."
+
+  $new = @{ comments = @(@{ parentCommentId = 0; content = $body; commentType = 1 }); status = $threadStatus }
+  $null = Invoke-RestMethod -Method Post -Uri "$base/threads?api-version=7.1" -Headers $headers -Body ($new | ConvertTo-Json -Depth 5)
+  Write-Host 'Posted PR comment.'
 } catch {
   if ($FailOnError) { throw }
   Write-Warning "Could not post the PR comment: $($_.Exception.Message)"
