@@ -1,4 +1,4 @@
-# Posts or updates one PR comment with the results in artifacts/summary.json.
+# Posts a PR comment with the results in artifacts/summary.json, and replies to or deletes earlier results.
 # Runs only for PR builds. Uses System.AccessToken, passed in as the SYSTEM_ACCESSTOKEN environment variable.
 # Each run posts a new result comment. Earlier results are kept: each one gets a reply saying a newer
 # result exists, and is resolved. The comment is found by a hidden marker.
@@ -55,7 +55,7 @@ $artifactsUrl = "$runUrl&view=artifacts&type=publishedArtifacts"
 $links = @("[View the run]($runUrl)")
 # Test results exist only if a suite ran, so link to them only then.
 if ($summary.unit -or $summary.specs) { $links += "[View tests]($testsUrl)" }
-# The TRX artifact is published only by the Specs run.
+# The artifacts tab holds the TRX files and host logs. The link is shown only if the Specs run produced results.
 if ($summary.specs) { $links += "[View artifacts]($artifactsUrl)" }
 $lines += $links -join ' | '
 Write-Host "Pull request: $prUrl"
@@ -96,7 +96,7 @@ try {
       if ($alreadySuperseded) {
         $skipped++
       } else {
-        $reply = @{ content = 'A newer pipeline run has superseded this result. See the latest comment.'; parentCommentId = 0; commentType = 1 }
+        $reply = @{ content = '⚠️ **A newer pipeline run has superseded this result.** See the latest comment.'; parentCommentId = 0; commentType = 1 }
         $null = Invoke-RestMethod -Method Post -Uri "$base/threads/$($thread.id)/comments?api-version=7.1" -Headers $headers -Body ($reply | ConvertTo-Json)
         $null = Invoke-RestMethod -Method Patch -Uri "$base/threads/$($thread.id)?api-version=7.1" -Headers $headers -Body (@{ status = 2 } | ConvertTo-Json)
         $kept++

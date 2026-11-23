@@ -25,7 +25,8 @@ steps:
       azuriteVersion: ${{ variables.azuriteVersion }}
       funcVersion: ${{ variables.funcVersion }}
 
-  # Rake sets UnitTestsStarted and SpecsStarted as each stage begins. The publish steps check them.
+  # Rake sets UnitTestsStarted and SpecsStarted as each stage begins. This step sets RakeStarted before rake runs.
+  # The summary and publish steps check these flags.
   - pwsh: |
       Write-Host "##vso[task.setvariable variable=RakeStarted]true"
       rake go

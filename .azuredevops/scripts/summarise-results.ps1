@@ -58,10 +58,10 @@ $summary = [ordered]@{
 New-Item -ItemType Directory -Force -Path (Split-Path $OutFile) | Out-Null
 $summary | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $OutFile -Encoding UTF8
 # Gather the artifacts into one folder, so a single upload step can publish them:
-# the newest unit and Specs TRX files, plus the Specs host logs.
+# the newest unit and Specs TRX files, the Specs host logs, and the build logs.
 $artifactDir = Join-Path (Split-Path $OutFile) 'test-results'
 New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
-# Each TRX goes into a folder for its suite, under a fixed file name.
+# Each TRX goes into a folder for its suite, under its original file name.
 $trxFiles = @{ 'unit-tests' = '..\..\tests\Ehcp.Tests\TestResults'; 'specs' = '..\..\tests\Ehcp.Specs\TestResults' }
 foreach ($suite in $trxFiles.Keys) {
   $newest = Get-ChildItem -Path (Join-Path $PSScriptRoot $trxFiles[$suite]) -Filter '*.trx' -File -ErrorAction SilentlyContinue |

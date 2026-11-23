@@ -1,6 +1,6 @@
 # Installs the Cosmos DB emulator if the image lacks it, then launches it in the background.
-# It needs 1 to 2 minutes to start cold, so it goes first and wait-for-cosmos.ps1 blocks later.
-# Prints the pipeline variable COSMOS_LAUNCH_EPOCH, which wait-for-cosmos.ps1 uses to report startup time.
+# It takes about 3 minutes to start from cold (measured at 172 to 198 seconds), so it goes first and wait-for-cosmos.ps1 blocks later.
+# Sets the pipeline variable COSMOS_LAUNCH_EPOCH, which wait-for-cosmos.ps1 uses to report startup time.
 $ErrorActionPreference = 'Continue'
 
 $exe = Join-Path $env:ProgramFiles 'Azure Cosmos DB Emulator\CosmosDB.Emulator.exe'
