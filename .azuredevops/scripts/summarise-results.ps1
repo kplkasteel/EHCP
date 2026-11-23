@@ -50,10 +50,16 @@ $summary | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $OutFile -Encoding
 # the newest unit and Specs TRX files, plus the Specs host logs.
 $artifactDir = Join-Path (Split-Path $OutFile) 'test-results'
 New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
-foreach ($folder in @('..\..\tests\Ehcp.Tests\TestResults', '..\..\tests\Ehcp.Specs\TestResults')) {
-  Get-ChildItem -Path (Join-Path $PSScriptRoot $folder) -Filter '*.trx' -File -ErrorAction SilentlyContinue |
-    Sort-Object LastWriteTime -Descending | Select-Object -First 1 |
-    Copy-Item -Destination $artifactDir -Force
+# Each TRX goes into a folder for its suite, under a fixed file name.
+$trxFiles = @{ 'unit-tests' = '..\..\tests\Ehcp.Tests\TestResults'; 'specs' = '..\..\tests\Ehcp.Specs\TestResults' }
+foreach ($suite in $trxFiles.Keys) {
+  $newest = Get-ChildItem -Path (Join-Path $PSScriptRoot $trxFiles[$suite]) -Filter '*.trx' -File -ErrorAction SilentlyContinue |
+    Sort-Object LastWriteTime -Descending | Select-Object -First 1
+  if ($newest) {
+    $suiteDir = Join-Path $artifactDir $suite
+    New-Item -ItemType Directory -Force -Path $suiteDir | Out-Null
+    Copy-Item -LiteralPath $newest.FullName -Destination (Join-Path $suiteDir $newest.Name) -Force
+  }
 }
 $hostLogs = Join-Path $PSScriptRoot '..\..\tests\Ehcp.Specs\TestResults\local-stack'
 if (Test-Path $hostLogs) {
