@@ -34,5 +34,3 @@ Write-Host ("{0,-30} {1}" -f 'Cosmos SDK (csproj)', $(if ($cosmosSdk) { $cosmosS
 
 if ($failed) { throw "Not runnable: $($failed -join ', ')" }
 exit 0
-
-## Comment to force another PR pipeline run
