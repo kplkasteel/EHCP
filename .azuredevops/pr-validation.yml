@@ -8,6 +8,8 @@ variables:
 
 steps:
   - pwsh: |
+      # TEMPORARY: forced early failure to test the set-up failure path. Remove before merging.
+      exit 1
       Write-Host "Build:            $(Build.BuildId)"
       Write-Host "Agent name:       $(Agent.Name)"
       Write-Host "Agent id:         $(Agent.Id)"
