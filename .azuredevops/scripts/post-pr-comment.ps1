@@ -15,7 +15,10 @@ function Format-Row($name, $r) {
 }
 
 $summary = Get-Content -LiteralPath $SummaryFile -Raw | ConvertFrom-Json
-$title = if ($summary.overall -eq 'passed') { 'PR validation passed' } else { 'PR validation failed' }
+$passed = $summary.overall -eq 'passed'
+$title = if ($passed) { 'PR validation passed' } else { 'PR validation failed' }
+# Thread status: 2 = Resolved (shown as Resolved in the PR), 1 = Active.
+$threadStatus = if ($passed) { 2 } else { 1 }
 
 $lines = @(
   $marker,
@@ -51,9 +54,11 @@ try {
     $commentId = ($existing.comments | Where-Object { $_.content -like "*$marker*" } | Select-Object -First 1).id
     $null = Invoke-RestMethod -Method Patch -Uri "$base/threads/$($existing.id)/comments/$commentId`?api-version=7.1" `
       -Headers $headers -Body (@{ content = $body } | ConvertTo-Json)
+    $null = Invoke-RestMethod -Method Patch -Uri "$base/threads/$($existing.id)?api-version=7.1" `
+      -Headers $headers -Body (@{ status = $threadStatus } | ConvertTo-Json)
     Write-Host "Updated PR comment (thread $($existing.id))."
   } else {
-    $new = @{ comments = @(@{ parentCommentId = 0; content = $body; commentType = 1 }); status = 1 }
+    $new = @{ comments = @(@{ parentCommentId = 0; content = $body; commentType = 1 }); status = $threadStatus }
     $null = Invoke-RestMethod -Method Post -Uri "$base/threads?api-version=7.1" -Headers $headers -Body ($new | ConvertTo-Json -Depth 5)
     Write-Host 'Posted PR comment.'
   }
