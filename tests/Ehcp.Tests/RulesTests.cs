@@ -8,7 +8,7 @@ public sealed class RulesTests
 {
     private static EmailDocument Email(params ChildResult[] children) => new("email-1", "thread-1", Direction.inbound, DateTimeOffset.UtcNow, children);
     private static ChildResult Child(ChildStatus status, string? match = null) => new(null, status, null, null, null, match, [], [], []);
-    [Fact] public void UnmatchedEmailExpiresAfterThirtyDays() => Assert.Equal(1, DocumentRules.EmailTtl(Email(Child(ChildStatus.PendingMatch))));
+    [Fact] public void UnmatchedEmailExpiresAfterThirtyDays() => Assert.Equal(2592000, DocumentRules.EmailTtl(Email(Child(ChildStatus.PendingMatch))));
     [Fact] public void AnyFoldedChildKeepsWholeEmail() => Assert.Equal(-1, DocumentRules.EmailTtl(Email(Child(ChildStatus.PendingMatch), Child(ChildStatus.Folded, "case-1"))));
     [Fact] public void FoldedChildRequiresInternalCaseId() => Assert.Throws<DocumentValidationException>(() => DocumentRules.Validate(Email(Child(ChildStatus.Folded))));
     [Fact] public void NonFoldedChildCannotHaveMatchedCaseId() => Assert.Throws<DocumentValidationException>(() => DocumentRules.Validate(Email(Child(ChildStatus.PendingMatch, "case-1"))));

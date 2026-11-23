@@ -36,12 +36,15 @@ if ($failing) {
   $lines += $failing | Select-Object -First 20 | ForEach-Object { "- $_" }
 }
 $lines += ''
-$lines += "[View the run]($env:SYSTEM_COLLECTIONURI$env:SYSTEM_TEAMPROJECT/_build/results?buildId=$env:BUILD_BUILDID)"
+$prUrl = "$($env:SYSTEM_COLLECTIONURI)$($env:SYSTEM_TEAMPROJECT)/_git/$($env:BUILD_REPOSITORY_NAME)/pullrequest/$($env:SYSTEM_PULLREQUEST_PULLREQUESTID)"
+$runUrl = "$($env:SYSTEM_COLLECTIONURI)$($env:SYSTEM_TEAMPROJECT)/_build/results?buildId=$($env:BUILD_BUILDID)"
+$lines += "[View the run]($runUrl) | [View the pull request]($prUrl)"
+Write-Host "Pull request: $prUrl"
 $lines += ''
 $lines += if ($passed) {
   '_This comment is marked as resolved because the pipeline tests passed._'
 } else {
-  '_This comment stays active until the pipeline tests pass._'
+  '_This comment is updated after each pipeline run. It stays active until a run passes._'
 }
 $body = $lines -join "`n"
 
