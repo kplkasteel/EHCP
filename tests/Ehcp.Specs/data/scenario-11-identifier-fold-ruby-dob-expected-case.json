@@ -1,0 +1,57 @@
+{
+  "id": "spec-case-ruby-evans",
+  "entityId": "spec-case-ruby-evans",
+  "name": "Ruby Evans",
+  "caseId": null,
+  "nhsNumber": "666 777 8889",
+  "dateOfBirth": "2015-07-19",
+  "relationships": [
+    {
+      "type": "parent",
+      "name": "Tom Evans",
+      "email": "tom.evans@example.com",
+      "phone": null,
+      "confidenceBand": "High",
+      "userStatus": null,
+      "sourceEmailId": null
+    }
+  ],
+  "attributes": [
+    {
+      "type": "mosaicId",
+      "value": "M-60001",
+      "sourceEmailId": null
+    },
+    {
+      "type": "synergyId",
+      "value": "S-6667778",
+      "sourceEmailId": null
+    },
+    {
+      "type": "gp",
+      "value": "Dr Shah",
+      "sourceEmailId": null
+    }
+  ],
+  "communications": [
+    {
+      "emailId": "{{emailId}}",
+      "direction": "inbound",
+      "receivedDateTime": "2026-11-01T09:00:00+00:00",
+      "subject": "{{subject}}",
+      "summary": null,
+      "keyFacts": null,
+      "draftReply": null
+    },
+    {
+      "emailId": "spec-fold-ruby-earlier",
+      "direction": "inbound",
+      "receivedDateTime": "2026-10-01T09:00:00+00:00",
+      "subject": "Earlier email about Ruby",
+      "summary": "Earlier summary",
+      "keyFacts": null,
+      "draftReply": null
+    }
+  ],
+  "conflicts": []
+}

@@ -1,0 +1,62 @@
+{
+  "id": "spec-case-freya-nolan",
+  "entityId": "spec-case-freya-nolan",
+  "name": "Freya Carter",
+  "caseId": null,
+  "nhsNumber": "555 666 7771",
+  "dateOfBirth": "2014-09-02",
+  "relationships": [
+    {
+      "type": "parent",
+      "name": "Paula Nolan",
+      "email": "paula.new@example.com",
+      "phone": "07700 900999",
+      "confidenceBand": "VeryLow",
+      "userStatus": null,
+      "sourceEmailId": "{{emailId}}"
+    }
+  ],
+  "attributes": [
+    {
+      "type": "dfeId",
+      "value": "D-80001",
+      "sourceEmailId": "spec-changed-freya-earlier"
+    },
+    {
+      "type": "school",
+      "value": "Hillside Academy",
+      "sourceEmailId": "{{emailId}}"
+    },
+    {
+      "type": "address",
+      "value": "22 Park Lane",
+      "sourceEmailId": "{{emailId}}"
+    },
+    {
+      "type": "gp",
+      "value": "Dr Lane",
+      "sourceEmailId": "{{emailId}}"
+    }
+  ],
+  "communications": [
+    {
+      "emailId": "{{emailId}}",
+      "direction": "inbound",
+      "receivedDateTime": "2026-11-01T09:00:00+00:00",
+      "subject": "{{subject}}",
+      "summary": null,
+      "keyFacts": null,
+      "draftReply": null
+    },
+    {
+      "emailId": "spec-changed-freya-earlier",
+      "direction": "inbound",
+      "receivedDateTime": "2026-10-01T09:00:00+00:00",
+      "subject": "Earlier email about Freya",
+      "summary": "Earlier summary",
+      "keyFacts": null,
+      "draftReply": null
+    }
+  ],
+  "conflicts": []
+}

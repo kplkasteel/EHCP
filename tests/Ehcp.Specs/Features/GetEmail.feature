@@ -186,6 +186,137 @@ Feature: Retrieve email
       | spec-c-3 | spec-thread-c3 | Sam Example | sam.example@example.com | Alex         |              |             | M-10001  |         |           |
       | spec-c-3 | spec-thread-c3 | Sam Example | sam.example@example.com | Alex Example |              |             |          |         | S-1234567 |
 
+  Scenario Outline: Email with a child matching an existing case without conflicts folds and adds new information to the case
+    Given the mailbox "ehcp-team-shared-1" is selected
+    And the scenario values are
+      | key               | value               |
+      | emailId           | <emailId>           |
+      | conversationId    | <conversationId>    |
+      | parentName        | <parentName>        |
+      | parentEmail       | <parentEmail>       |
+      | childParentName   | <childParentName>   |
+      | childParentEmail  | <childParentEmail>  |
+      | childParent2Name  | <childParent2Name>  |
+      | childParent2Email | <childParent2Email> |
+      | expectedCaseId    | <expectedCaseId>    |
+      | expectedStatus    | Folded              |
+      | expectedMatches   |                     |
+    And the child identifiers are
+      | identifier  | value         |
+      | childName   | <childName>   |
+      | nhsNumber   | <nhsNumber>   |
+      | dateOfBirth | <dateOfBirth> |
+      | mosaicId    | <mosaicId>    |
+      | dfeId       | <dfeId>       |
+      | synergyId   | <synergyId>   |
+      | address     | <address>     |
+      | gp          | <gp>          |
+      | siblings    | <siblings>    |
+      | school      | <school>      |
+    And the database is setup to contain "scenario-11-identifier-fold-data.json"
+    And the database contains cases "scenario-11-identifier-fold-cases.json"
+    And we setup mock ai extraction to return dataset "scenario-11-identifier-fold-ai-extract.json"
+    And we setup mock graph api to return dataset "scenario-11-identifier-fold-graph-email.json"
+    When the email record "scenario-11-identifier-fold-queue.json" is added to the queue
+    And we wait for the database processing status to be "Processed"
+    When a request is made to the /mailbox/"ehcp-team-shared-1"/emails/"<emailId>" endpoint
+    Then the email record should be retrieved matching "scenario-11-identifier-fold-expected-result.json"
+    And the email child should have matched case id "<expectedCaseId>"
+    When a request is made to the /mailbox/"ehcp-team-shared-1"/cases/"<expectedCaseId>" endpoint
+    Then the case record should be retrieved matching "scenario-11-identifier-fold-<expectedCase>-expected-case.json"
+    When a request is made to the /mailbox/"ehcp-team-shared-1"/cases/"spec-case-leo-grant" endpoint
+    Then the case record should be retrieved matching "scenario-11-identifier-fold-leo-unchanged-expected-case.json"
+    When a request is made to the /mailbox/"ehcp-team-shared-1"/cases/"spec-case-omar-sadiq" endpoint
+    Then the case record should be retrieved matching "scenario-11-identifier-fold-omar-unchanged-expected-case.json"
+# Seeded cases: spec-case-ruby-evans (NHS 666 777 8889, Synergy S-6667778, Mosaic M-60001, GP Dr Shah, Parent Tom Evans, one earlier email, no DOB or DfE),
+# spec-case-iris-webb (DOB 2013-12-05, Synergy S-6667781, Mosaic M-60004, Parent Carl Webb, no NHS number),
+# spec-case-nora-field (DOB 2014-06-20, NHS 777 888 1112, DfE D-70003, address, GP and sibling, Parent Ann Field),
+# spec-case-omar-sadiq (same DOB as Nora Field) and spec-case-leo-grant, which must never change.
+# The email is Folded with no possible matches. The case gains the email and any new information, with its source email, and nothing is added twice.
+# Changed information is covered by the next scenario.
+# expectedCase names the scenario-11-identifier-fold-<expectedCase>-expected-case.json file.
+
+    Examples:
+      | emailId                    | conversationId  | parentName  | parentEmail             | childName  | nhsNumber    | dateOfBirth | mosaicId | dfeId   | synergyId | address    | gp      | siblings  | school           | childParentName | childParentEmail      | childParent2Name | childParent2Email       | expectedCaseId       | expectedCase      |
+      | spec-u-nhs                 | spec-thread-u01 | Sam Example | sam.example@example.com | Ruby Evans | 666 777 8889 |             |          |         |           |            |         |           |                  |                 |                       |                  |                         | spec-case-ruby-evans | ruby-email-only   |
+      | spec-u-synergy             | spec-thread-u02 | Sam Example | sam.example@example.com | Ruby Evans |              |             |          |         | S-6667778 |            |         |           |                  |                 |                       |                  |                         | spec-case-ruby-evans | ruby-email-only   |
+      | spec-u-mosaic              | spec-thread-u03 | Sam Example | sam.example@example.com | Ruby Evans |              |             | M-60001  |         |           |            |         |           |                  |                 |                       |                  |                         | spec-case-ruby-evans | ruby-email-only   |
+      | spec-u-new-dob             | spec-thread-u04 | Sam Example | sam.example@example.com | Ruby Evans | 666 777 8889 | 2015-07-19  |          |         |           |            |         |           |                  |                 |                       |                  |                         | spec-case-ruby-evans | ruby-dob          |
+      | spec-u-new-parent          | spec-thread-u05 | Sam Example | sam.example@example.com | Ruby Evans | 666 777 8889 |             |          |         |           |            |         |           |                  | Tom Evans       | tom.evans@example.com | Megan Evans      | megan.evans@example.com | spec-case-ruby-evans | ruby-parent       |
+      | spec-u-new-attributes      | spec-thread-u06 | Sam Example | sam.example@example.com | Ruby Evans | 666 777 8889 |             |          | D-70001 |           |            | Dr Shah |           | Oakfield Primary |                 |                       |                  |                         | spec-case-ruby-evans | ruby-attributes   |
+      | spec-u-all-new             | spec-thread-u07 | Sam Example | sam.example@example.com | Ruby Evans | 666 777 8889 | 2015-07-19  |          | D-70001 |           |            | Dr Shah |           | Oakfield Primary | Tom Evans       | tom.evans@example.com | Megan Evans      | megan.evans@example.com | spec-case-ruby-evans | ruby-all          |
+      | spec-u-fills-nhs           | spec-thread-u08 | Sam Example | sam.example@example.com | Iris Webb  | 666 777 1110 |             | M-60004  |         |           |            |         |           |                  |                 |                       |                  |                         | spec-case-iris-webb  | iris-nhs          |
+      | spec-u-parent-match        | spec-thread-u09 | Sam Example | sam.example@example.com | Ruby Evans |              |             |          |         |           |            |         |           | Oakfield Primary | Tom Evans       | tom.evans@example.com |                  |                         | spec-case-ruby-evans | ruby-parent-match |
+      | spec-u-new-id-parent-match | spec-thread-u10 | Sam Example | sam.example@example.com | Ruby Evans |              |             |          | D-70001 |           |            |         |           |                  | Tom Evans       | tom.evans@example.com |                  |                         | spec-case-ruby-evans | ruby-new-dfe      |
+      | spec-u-one-high            | spec-thread-u11 | Sam Example | sam.example@example.com | Nora Field |              | 2014-06-20  |          |         |           | 1 Oak Road | Dr Lane | Max Field | Hillside Academy |                 |                       |                  |                         | spec-case-nora-field | nora-school       |
+      | spec-u-one-medium          | spec-thread-u12 | Sam Example | sam.example@example.com | Nora Field |              | 2014-06-20  |          |         |           |            |         |           |                  | Joe Field       | joe.field@example.com |                  |                         | spec-case-nora-field | nora-parent       |
+      | spec-u-single-medium       | spec-thread-u13 | Sam Example | sam.example@example.com | Iris Webb  |              | 2013-12-05  |          |         |           |            |         |           | Hillside Academy |                 |                       |                  |                         | spec-case-iris-webb  | iris-school       |
+
+  Scenario Outline: Email with a child matching an existing case without conflicts folds and keeps the latest information
+    Given the mailbox "ehcp-team-shared-1" is selected
+    And the scenario values are
+      | key               | value               |
+      | emailId           | <emailId>           |
+      | conversationId    | <conversationId>    |
+      | parentName        | <parentName>        |
+      | parentEmail       | <parentEmail>       |
+      | childParentName   | <childParentName>   |
+      | childParentEmail  | <childParentEmail>  |
+      | childParentPhone  | <childParentPhone>  |
+      | expectedCaseId    | <expectedCaseId>    |
+      | expectedStatus    | Folded              |
+      | expectedMatches   |                     |
+    And the child identifiers are
+      | identifier  | value         |
+      | childName   | <childName>   |
+      | nhsNumber   | <nhsNumber>   |
+      | dateOfBirth | <dateOfBirth> |
+      | dfeId       | <dfeId>       |
+      | address     | <address>     |
+      | gp          | <gp>          |
+      | siblings    | <siblings>    |
+      | school      | <school>      |
+    And the database is setup to contain "scenario-11-identifier-fold-data.json"
+    And the database contains cases "scenario-11-changed-information-cases.json"
+    And we setup mock ai extraction to return dataset "scenario-11-identifier-fold-ai-extract.json"
+    And we setup mock graph api to return dataset "scenario-11-identifier-fold-graph-email.json"
+    When the email record "scenario-11-identifier-fold-queue.json" is added to the queue
+    And we wait for the database processing status to be "Processed"
+    When a request is made to the /mailbox/"ehcp-team-shared-1"/emails/"<emailId>" endpoint
+    Then the email record should be retrieved matching "scenario-11-identifier-fold-expected-result.json"
+    And the email child should have matched case id "<expectedCaseId>"
+    When a request is made to the /mailbox/"ehcp-team-shared-1"/cases/"<expectedCaseId>" endpoint
+    Then the case record should be retrieved matching "scenario-11-changed-information-<expectedCase>-expected-case.json"
+    When a request is made to the /mailbox/"ehcp-team-shared-1"/cases/"spec-case-lena-frost" endpoint
+    Then the case record should be retrieved matching "scenario-11-changed-information-lena-unchanged-expected-case.json"
+# Seeded cases: spec-case-freya-nolan (NHS 555 666 7771, DOB 2014-09-02, DfE D-80001, school Oakfield Primary, address 1 Elm Road, GP Dr Shah,
+# Parent Paula Nolan; everything from an email of 2026-10-01),
+# spec-case-hugo-marsh (NHS 555 666 7782, DfE D-80002 and GP Dr Lane from an email of 2026-10-01, school Hillside Academy and
+# Parent Rita Marsh from an email of 2026-12-01, no address) and spec-case-lena-frost, which must never change.
+# The email processed is dated 2026-11-01, so it is newer than Freya's information and older than some of Hugo's.
+# The latest email wins: a newer value replaces the old one, an older email never overwrites newer information,
+# and information left out of the email is kept.
+
+    Examples:
+      | emailId                  | conversationId  | parentName  | parentEmail             | childName     | nhsNumber    | dateOfBirth | dfeId   | address       | gp      | siblings  | school           | childParentName | childParentEmail      | childParentPhone | expectedCaseId        | expectedCase          |
+      | spec-w-dfe               | spec-thread-w01 | Sam Example | sam.example@example.com | Freya Nolan   |              |             | D-80001 |               |         |           |                  |                 |                       |                  | spec-case-freya-nolan | freya-email-only      |
+      | spec-w-same-information  | spec-thread-w02 | Sam Example | sam.example@example.com | Freya Nolan   | 555 666 7771 |             |         | 1 Elm Road    | Dr Shah |           | Oakfield Primary | Paula Nolan     | paula.old@example.com | 07700 900101     | spec-case-freya-nolan | freya-email-only      |
+      | spec-w-new-school        | spec-thread-w03 | Sam Example | sam.example@example.com | Freya Nolan   | 555 666 7771 |             |         |               |         |           | Hillside Academy |                 |                       |                  | spec-case-freya-nolan | freya-school          |
+      | spec-w-new-address-gp    | spec-thread-w04 | Sam Example | sam.example@example.com | Freya Nolan   | 555 666 7771 |             |         | 22 Park Lane  | Dr Lane |           |                  |                 |                       |                  | spec-case-freya-nolan | freya-address-gp      |
+      | spec-w-new-parent-email  | spec-thread-w05 | Sam Example | sam.example@example.com | Freya Nolan   | 555 666 7771 |             |         |               |         |           |                  | Paula Nolan     | paula.new@example.com | 07700 900101     | spec-case-freya-nolan | freya-parent-email    |
+      | spec-w-new-parent-phone  | spec-thread-w06 | Sam Example | sam.example@example.com | Freya Nolan   | 555 666 7771 |             |         |               |         |           |                  | Paula Nolan     | paula.old@example.com | 07700 900999     | spec-case-freya-nolan | freya-parent-phone    |
+      | spec-w-new-name          | spec-thread-w07 | Sam Example | sam.example@example.com | Freya Carter  | 555 666 7771 |             |         |               |         |           |                  |                 |                       |                  | spec-case-freya-nolan | freya-name            |
+      | spec-w-all-changed       | spec-thread-w08 | Sam Example | sam.example@example.com | Freya Carter  | 555 666 7771 |             |         | 22 Park Lane  | Dr Lane |           | Hillside Academy | Paula Nolan     | paula.new@example.com | 07700 900999     | spec-case-freya-nolan | freya-all             |
+      | spec-w-changed-and-new   | spec-thread-w09 | Sam Example | sam.example@example.com | Freya Nolan   | 555 666 7771 |             |         |               |         | Max Nolan | Hillside Academy |                 |                       |                  | spec-case-freya-nolan | freya-changed-and-new |
+      | spec-w-left-out          | spec-thread-w10 | Sam Example | sam.example@example.com |               | 555 666 7771 |             |         |               |         |           |                  | Paula Nolan     |                       |                  | spec-case-freya-nolan | freya-email-only      |
+      | spec-w-parent-match      | spec-thread-w11 | Sam Example | sam.example@example.com | Freya Nolan   |              |             |         |               |         |           |                  | Paula Nolan     | paula.new@example.com | 07700 900101     | spec-case-freya-nolan | freya-parent-email    |
+      | spec-w-no-identifier     | spec-thread-w12 | Sam Example | sam.example@example.com | Freya Nolan   |              | 2014-09-02  |         |               |         |           | Hillside Academy |                 |                       |                  | spec-case-freya-nolan | freya-school          |
+      | spec-w-older-school      | spec-thread-w13 | Sam Example | sam.example@example.com | Hugo Marsh    | 555 666 7782 |             |         |               |         |           | Oakfield Primary |                 |                       |                  | spec-case-hugo-marsh  | hugo-email-only       |
+      | spec-w-older-parent      | spec-thread-w14 | Sam Example | sam.example@example.com | Hugo Marsh    | 555 666 7782 |             |         |               |         |           |                  | Rita Marsh      | rita.old@example.com  | 07700 900111     | spec-case-hugo-marsh  | hugo-email-only       |
+      | spec-w-older-name        | spec-thread-w15 | Sam Example | sam.example@example.com | Hugo Marshall | 555 666 7782 |             |         |               |         |           |                  |                 |                       |                  | spec-case-hugo-marsh  | hugo-email-only       |
+      | spec-w-older-new-address | spec-thread-w16 | Sam Example | sam.example@example.com | Hugo Marsh    | 555 666 7782 |             |         | 9 Mill Street |         |           |                  |                 |                       |                  | spec-case-hugo-marsh  | hugo-new-address      |
+      | spec-w-older-and-newer   | spec-thread-w17 | Sam Example | sam.example@example.com | Hugo Marsh    | 555 666 7782 |             |         |               | Dr Shah |           | Oakfield Primary |                 |                       |                  | spec-case-hugo-marsh  | hugo-gp               |
+
   Scenario: Email with no child information is discarded with a rationale
     Given the mailbox "ehcp-team-shared-1" is selected
     And the database is setup to contain "scenario-3-no-child-data.json"

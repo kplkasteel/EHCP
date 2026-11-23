@@ -28,6 +28,8 @@ Values in the AI column come from the feature file's Examples table, not from th
 | 7 Parent match | Email with a fuzzy-matching child folds on a parent match and stays pending without one | 5 | Oliver Hughes, Amelia Khan | `scenario-7-low-match-relationships-*` |
 | 8 Identifier differs | Email with a child whose identifier differs from the matched case is a conflict | 6 | Isla Patel, Ivy Chen | `scenario-8-low-match-identifier-mismatch-*` |
 | 9 Date of birth | Email with a child matching on date of birth folds on a parent match and stays pending without one | 4 | Noah Williams, Zara Ahmed | `scenario-9-low-match-dob-*` |
+| 11 Identifier fold (US-0007) | Email with a child matching an existing case without conflicts folds and adds new information to the case | 13 | Ruby Evans, Iris Webb, Nora Field, Omar Sadiq, Leo Grant | `scenario-11-identifier-fold-*` |
+| 11 Changed information (US-0007) | Email with a child matching an existing case without conflicts folds and keeps the latest information | 17 | Freya Nolan, Hugo Marsh, Lena Frost | `scenario-11-changed-information-*` (email, queue and AI files shared with identifier fold) |
 
 `scenario-6-no-dob-match-possible-matches-*` exists here but no scenario in `GetEmail.feature` uses it. Treat it as unused until it is either wired in or removed.
 
@@ -62,6 +64,24 @@ Scenarios 5 and 6 seed the same two cases. Scenarios 7, 8 and 9 each seed their 
 |---|---|---|---|---|---|---|---|---|---|
 | `spec-case-noah-williams` | Noah Williams | 2019-05-05 | 444 555 6667 | S-4445556 | D-50001 | M-40001 | S-4445556 | Emma Williams, emma.williams@example.com | should match |
 | `spec-case-zara-ahmed` | Zara Ahmed | 2016-01-20 | 444 555 7778 | S-4445557 | D-50002 | M-40002 | S-4445557 | Omar Ahmed, omar.ahmed@example.com | must not match |
+
+### Scenario 11 cases
+
+| Case | Name | DOB | NHS | DfE | Mosaic | Synergy | Other | Parent | Role |
+|---|---|---|---|---|---|---|---|---|---|
+| `spec-case-ruby-evans` | Ruby Evans | none | 666 777 8889 | none | M-60001 | S-6667778 | GP Dr Shah; one earlier email | Tom Evans, tom.evans@example.com | main fold case |
+| `spec-case-iris-webb` | Iris Webb | 2013-12-05 | none | none | M-60004 | S-6667781 | none | Carl Webb, carl.webb@example.com | has no NHS number |
+| `spec-case-nora-field` | Nora Field | 2014-06-20 | 777 888 1112 | D-70003 | none | none | address 1 Oak Road; GP Dr Lane; sibling Max Field | Ann Field, ann.field@example.com | shares a DOB with Omar |
+| `spec-case-omar-sadiq` | Omar Sadiq | 2014-06-20 | 777 888 2223 | D-70004 | none | none | none | Hana Sadiq, hana.sadiq@example.com | must never change |
+| `spec-case-leo-grant` | Leo Grant | 2015-03-08 | 666 777 9990 | D-70005 | M-60005 | S-6667780 | none | Nina Grant, nina.grant@example.com | must never change |
+
+### Scenario 11 changed information cases
+
+| Case | Name | DOB | NHS | From the 2026-10-01 email | From the 2026-12-01 email | Role |
+|---|---|---|---|---|---|---|
+| `spec-case-freya-nolan` | Freya Nolan | 2014-09-02 | 555 666 7771 | DfE D-80001; school Oakfield Primary; address 1 Elm Road; GP Dr Shah; parent Paula Nolan, paula.old@example.com, 07700 900101 | none | older than the email |
+| `spec-case-hugo-marsh` | Hugo Marsh | 2013-04-17 | 555 666 7782 | DfE D-80002; GP Dr Lane | school Hillside Academy; parent Rita Marsh, rita.new@example.com, 07700 900202 | partly newer than the email |
+| `spec-case-lena-frost` | Lena Frost | 2012-11-23 | 555 666 7793 | none | none | must never change |
 
 ## Retrieval, discard and single child
 
@@ -180,6 +200,50 @@ Seeded: Noah Williams (should match), Zara Ahmed (must not match). Date of birth
 | `spec-l-dob-parent-email` | Name Leo; DOB 2019-05-05; parent Kate Brown, emma.williams@example.com | Folded to `spec-case-noah-williams` | 4, 6, 6a |
 | `spec-l-dob-parent-name` | Name Leo; DOB 2019-05-05; parent Emma Williams, other@example.com | Folded to `spec-case-noah-williams` | 4, 6, 6a |
 
+## Scenario 11: identifier fold (US-0007)
+
+Seeded: the five scenario 11 cases. Every example is Folded with no possible matches. The case after the fold is compared with `scenario-11-identifier-fold-<expectedCase>-expected-case.json`, and Leo Grant and Omar Sadiq must be unchanged. Added relationships and attributes carry the source email ID. Changed information is covered in the next section.
+
+| Example | AI-extracted child | Folds into | Case change besides the email | Rule path |
+|---|---|---|---|---|
+| `spec-u-nhs` | Ruby's NHS | `spec-case-ruby-evans` | email added, nothing else changes | 4, 5, 5b |
+| `spec-u-synergy` | Ruby's Synergy | `spec-case-ruby-evans` | email added, nothing else changes | 4, 5, 5b |
+| `spec-u-mosaic` | Ruby's Mosaic | `spec-case-ruby-evans` | email added, nothing else changes | 4, 5, 5b |
+| `spec-u-new-dob` | Ruby's NHS; DOB 2015-07-19 | `spec-case-ruby-evans` | DOB filled in | 4, 5, 5b |
+| `spec-u-new-parent` | Ruby's NHS; parents Tom Evans and Megan Evans | `spec-case-ruby-evans` | Megan added, Tom not added twice | 4, 5, 5b |
+| `spec-u-new-attributes` | Ruby's NHS; DfE D-70001; school; GP Dr Shah | `spec-case-ruby-evans` | DfE and school added, GP not added twice | 4, 5, 5b |
+| `spec-u-all-new` | Ruby's NHS and all of the new information above | `spec-case-ruby-evans` | all added once | 4, 5, 5b |
+| `spec-u-fills-nhs` | Iris's Mosaic; NHS 666 777 1110 | `spec-case-iris-webb` | NHS number filled in | 4, 5, 5b |
+| `spec-u-parent-match` | Name Ruby Evans; parent Tom Evans; school | `spec-case-ruby-evans` | school added | 4, 6, 6a |
+| `spec-u-new-id-parent-match` | Name Ruby Evans; parent Tom Evans; DfE D-70001, held by no case | `spec-case-ruby-evans` | DfE added, no new case | 4, 5, 6, 6a |
+| `spec-u-one-high` | Name Nora Field; DOB; address; GP; sibling; school (Nora High 21, Omar Low 7) | `spec-case-nora-field` | school added | 4, 6c, 7a |
+| `spec-u-one-medium` | Name Nora Field; DOB; parent Joe Field (Nora Medium 12, Omar Low 7) | `spec-case-nora-field` | Joe added | 4, 6c, 7d |
+| `spec-u-single-medium` | Name Iris Webb; DOB; school (Iris Medium 12) | `spec-case-iris-webb` | school added | 4, 6c, 8b |
+
+## Scenario 11: changed information (US-0007)
+
+The email is dated 2026-11-01 and every example is Folded. The latest value wins by email date. A replaced value carries the new source email ID. The same relationship type and name is the same person. A case's name has no source email, so its date is the case's latest communication.
+
+| Example | Folds into | Case change |
+|---|---|---|
+| `spec-w-dfe` | `spec-case-freya-nolan` | email added only |
+| `spec-w-same-information` | `spec-case-freya-nolan` | email added only, nothing added twice |
+| `spec-w-new-school` | `spec-case-freya-nolan` | school replaced |
+| `spec-w-new-address-gp` | `spec-case-freya-nolan` | address and GP replaced |
+| `spec-w-new-parent-email` | `spec-case-freya-nolan` | parent email replaced, still one parent |
+| `spec-w-new-parent-phone` | `spec-case-freya-nolan` | parent phone replaced, still one parent |
+| `spec-w-new-name` | `spec-case-freya-nolan` | name replaced |
+| `spec-w-all-changed` | `spec-case-freya-nolan` | name, school, address, GP and parent replaced |
+| `spec-w-changed-and-new` | `spec-case-freya-nolan` | school replaced, sibling added |
+| `spec-w-left-out` | `spec-case-freya-nolan` | email added only, nothing blanked, still one parent |
+| `spec-w-parent-match` | `spec-case-freya-nolan` | parent email replaced (6a) |
+| `spec-w-no-identifier` | `spec-case-freya-nolan` | school replaced (8b, Medium 12) |
+| `spec-w-older-school` | `spec-case-hugo-marsh` | newer school kept |
+| `spec-w-older-parent` | `spec-case-hugo-marsh` | newer parent email and phone kept |
+| `spec-w-older-name` | `spec-case-hugo-marsh` | name kept |
+| `spec-w-older-new-address` | `spec-case-hugo-marsh` | missing address added |
+| `spec-w-older-and-newer` | `spec-case-hugo-marsh` | newer school kept, older GP replaced |
+
 ## Token reference
 
 The `case-creation-*` files are templates. The other fixtures are plain JSON except where noted. Values come from the scenario's `the scenario values are` and `the child identifiers are` tables.
@@ -190,8 +254,8 @@ The `case-creation-*` files are templates. The other fixtures are plain JSON exc
 | `{{childName:json}}`, `{{nhsNumber:json}}`, `{{caseId:json}}`, `{{dateOfBirth:json}}` | JSON literal, `null` when blank | child identifiers |
 | `{{attributes}}` | JSON array with `confidenceBand`, for the AI-extract input | other identifiers |
 | `{{expectedAttributes}}` | JSON array with `type` and `value` only, for the expected output | other identifiers |
-| `{{childRelationships}}` | one `parent` relationship, or `[]` | `childParentName` / `childParentEmail` |
-| `{{expectedRelationships}}` | same relationship as the API returns it (`confidenceBand: VeryLow`), or `[]` | `childParentName` / `childParentEmail` |
+| `{{childRelationships}}` | up to two `parent` relationships, or `[]` | `childParentName` / `childParentEmail`, `childParent2Name` / `childParent2Email` |
+| `{{expectedRelationships}}` | same relationships as the API returns them (`confidenceBand: VeryLow`), or `[]` | same as above |
 | `{{expectedMatches}}` | ordered `entityId:ConfidenceBand:score` list, or `[]` when blank | `expectedMatches` column |
 | `{{expectedStatus}}` | `PendingMatch` by default | `expectedStatus` column |
 | `{{expectedCaseId:json}}` | matched case ID, or `null` | `expectedCaseId` column |

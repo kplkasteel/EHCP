@@ -1,0 +1,43 @@
+{
+  "id": "spec-case-iris-webb",
+  "entityId": "spec-case-iris-webb",
+  "name": "Iris Webb",
+  "caseId": null,
+  "nhsNumber": "666 777 1110",
+  "dateOfBirth": "2013-12-05",
+  "relationships": [
+    {
+      "type": "parent",
+      "name": "Carl Webb",
+      "email": "carl.webb@example.com",
+      "phone": null,
+      "confidenceBand": "High",
+      "userStatus": null,
+      "sourceEmailId": null
+    }
+  ],
+  "attributes": [
+    {
+      "type": "mosaicId",
+      "value": "M-60004",
+      "sourceEmailId": null
+    },
+    {
+      "type": "synergyId",
+      "value": "S-6667781",
+      "sourceEmailId": null
+    }
+  ],
+  "communications": [
+    {
+      "emailId": "{{emailId}}",
+      "direction": "inbound",
+      "receivedDateTime": "2026-11-01T09:00:00+00:00",
+      "subject": "{{subject}}",
+      "summary": null,
+      "keyFacts": null,
+      "draftReply": null
+    }
+  ],
+  "conflicts": []
+}

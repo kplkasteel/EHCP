@@ -100,18 +100,23 @@ public sealed partial class GetEmailSteps
         };
     }
 
-    // The extracted child's Parent relationship, taken from the optional childParentName / childParentEmail
-    // scenario values. The extraction supplies no confidence band, so the API returns the default (VeryLow).
+    // The extracted child's Parent relationships, taken from the optional childParentName / childParentEmail and
+    // childParent2Name / childParent2Email scenario values, each with an optional Phone. The extraction supplies no confidence band, so the
+    // API returns the default (VeryLow).
     private string BuildChildRelationships(bool expected)
     {
-        string name = _scenarioValues.GetValueOrDefault("childParentName", "");
-        string email = _scenarioValues.GetValueOrDefault("childParentEmail", "");
-        if (name.Length == 0 && email.Length == 0) return "[]";
-        string? emailOrNull = email.Length > 0 ? email : null;
+        var parents = new[] { "childParent", "childParent2" }
+            .Select(key => (Name: _scenarioValues.GetValueOrDefault(key + "Name", ""),
+                Email: _scenarioValues.GetValueOrDefault(key + "Email", ""),
+                Phone: _scenarioValues.GetValueOrDefault(key + "Phone", "")))
+            .Where(parent => parent.Name.Length > 0 || parent.Email.Length > 0)
+            .Select(parent => (parent.Name, Email: parent.Email.Length > 0 ? parent.Email : null,
+                Phone: parent.Phone.Length > 0 ? parent.Phone : null));
         return expected
-            ? JsonSerializer.Serialize(new[] { new { type = "parent", name, email = emailOrNull, phone = (string?)null,
-                confidenceBand = "VeryLow", userStatus = (string?)null, sourceEmailId = (string?)null } })
-            : JsonSerializer.Serialize(new[] { new { type = "parent", name, email = emailOrNull, phone = (string?)null } });
+            ? JsonSerializer.Serialize(parents.Select(parent => new { type = "parent", name = parent.Name, email = parent.Email,
+                phone = parent.Phone, confidenceBand = "VeryLow", userStatus = (string?)null, sourceEmailId = (string?)null }))
+            : JsonSerializer.Serialize(parents.Select(parent => new { type = "parent", name = parent.Name, email = parent.Email,
+                phone = parent.Phone }));
     }
 
     // Example syntax: case-id:Medium:10;other-id:Low:7 (blank means no matches).

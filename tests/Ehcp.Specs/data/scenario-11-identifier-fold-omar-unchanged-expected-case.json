@@ -1,0 +1,28 @@
+{
+  "id": "spec-case-omar-sadiq",
+  "entityId": "spec-case-omar-sadiq",
+  "name": "Omar Sadiq",
+  "caseId": null,
+  "nhsNumber": "777 888 2223",
+  "dateOfBirth": "2014-06-20",
+  "relationships": [
+    {
+      "type": "parent",
+      "name": "Hana Sadiq",
+      "email": "hana.sadiq@example.com",
+      "phone": null,
+      "confidenceBand": "High",
+      "userStatus": null,
+      "sourceEmailId": null
+    }
+  ],
+  "attributes": [
+    {
+      "type": "dfeId",
+      "value": "D-70004",
+      "sourceEmailId": null
+    }
+  ],
+  "communications": [],
+  "conflicts": []
+}

@@ -1,0 +1,38 @@
+{
+  "id": "spec-case-lena-frost",
+  "entityId": "spec-case-lena-frost",
+  "name": "Lena Frost",
+  "caseId": null,
+  "nhsNumber": "555 666 7793",
+  "dateOfBirth": "2012-11-23",
+  "relationships": [
+    {
+      "type": "parent",
+      "name": "Gail Frost",
+      "email": "gail.frost@example.com",
+      "phone": null,
+      "confidenceBand": "VeryLow",
+      "userStatus": null,
+      "sourceEmailId": null
+    }
+  ],
+  "attributes": [
+    {
+      "type": "dfeId",
+      "value": "D-80003",
+      "sourceEmailId": null
+    },
+    {
+      "type": "school",
+      "value": "Oakfield Primary",
+      "sourceEmailId": null
+    },
+    {
+      "type": "gp",
+      "value": "Dr Shah",
+      "sourceEmailId": null
+    }
+  ],
+  "communications": [],
+  "conflicts": []
+}

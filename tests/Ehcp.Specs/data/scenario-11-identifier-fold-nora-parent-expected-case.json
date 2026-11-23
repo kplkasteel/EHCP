@@ -1,0 +1,62 @@
+{
+  "id": "spec-case-nora-field",
+  "entityId": "spec-case-nora-field",
+  "name": "Nora Field",
+  "caseId": null,
+  "nhsNumber": "777 888 1112",
+  "dateOfBirth": "2014-06-20",
+  "relationships": [
+    {
+      "type": "parent",
+      "name": "Ann Field",
+      "email": "ann.field@example.com",
+      "phone": null,
+      "confidenceBand": "High",
+      "userStatus": null,
+      "sourceEmailId": null
+    },
+    {
+      "type": "parent",
+      "name": "Joe Field",
+      "email": "joe.field@example.com",
+      "phone": null,
+      "confidenceBand": "VeryLow",
+      "userStatus": null,
+      "sourceEmailId": "{{emailId}}"
+    }
+  ],
+  "attributes": [
+    {
+      "type": "dfeId",
+      "value": "D-70003",
+      "sourceEmailId": null
+    },
+    {
+      "type": "address",
+      "value": "1 Oak Road",
+      "sourceEmailId": null
+    },
+    {
+      "type": "gp",
+      "value": "Dr Lane",
+      "sourceEmailId": null
+    },
+    {
+      "type": "siblings",
+      "value": "Max Field",
+      "sourceEmailId": null
+    }
+  ],
+  "communications": [
+    {
+      "emailId": "{{emailId}}",
+      "direction": "inbound",
+      "receivedDateTime": "2026-11-01T09:00:00+00:00",
+      "subject": "{{subject}}",
+      "summary": null,
+      "keyFacts": null,
+      "draftReply": null
+    }
+  ],
+  "conflicts": []
+}

@@ -1,0 +1,177 @@
+[
+  {
+    "id": "spec-case-ruby-evans",
+    "entityId": "spec-case-ruby-evans",
+    "name": "Ruby Evans",
+    "nhsNumber": "666 777 8889",
+    "dateOfBirth": null,
+    "relationships": [
+      {
+        "type": "parent",
+        "name": "Tom Evans",
+        "email": "tom.evans@example.com",
+        "phone": null,
+        "confidenceBand": "High"
+      }
+    ],
+    "attributes": [
+      {
+        "type": "mosaicId",
+        "value": "M-60001",
+        "confidenceBand": "High"
+      },
+      {
+        "type": "synergyId",
+        "value": "S-6667778",
+        "confidenceBand": "High"
+      },
+      {
+        "type": "gp",
+        "value": "Dr Shah",
+        "confidenceBand": "High"
+      }
+    ],
+    "communications": [
+      {
+        "emailId": "spec-fold-ruby-earlier",
+        "direction": "inbound",
+        "receivedDateTime": "2026-10-01T09:00:00+00:00",
+        "subject": "Earlier email about Ruby",
+        "summary": "Earlier summary",
+        "keyFacts": null,
+        "draftReply": null
+      }
+    ],
+    "conflicts": []
+  },
+  {
+    "id": "spec-case-iris-webb",
+    "entityId": "spec-case-iris-webb",
+    "name": "Iris Webb",
+    "nhsNumber": null,
+    "dateOfBirth": "2013-12-05",
+    "relationships": [
+      {
+        "type": "parent",
+        "name": "Carl Webb",
+        "email": "carl.webb@example.com",
+        "phone": null,
+        "confidenceBand": "High"
+      }
+    ],
+    "attributes": [
+      {
+        "type": "mosaicId",
+        "value": "M-60004",
+        "confidenceBand": "High"
+      },
+      {
+        "type": "synergyId",
+        "value": "S-6667781",
+        "confidenceBand": "High"
+      }
+    ],
+    "communications": [],
+    "conflicts": []
+  },
+  {
+    "id": "spec-case-nora-field",
+    "entityId": "spec-case-nora-field",
+    "name": "Nora Field",
+    "nhsNumber": "777 888 1112",
+    "dateOfBirth": "2014-06-20",
+    "relationships": [
+      {
+        "type": "parent",
+        "name": "Ann Field",
+        "email": "ann.field@example.com",
+        "phone": null,
+        "confidenceBand": "High"
+      }
+    ],
+    "attributes": [
+      {
+        "type": "dfeId",
+        "value": "D-70003",
+        "confidenceBand": "High"
+      },
+      {
+        "type": "address",
+        "value": "1 Oak Road",
+        "confidenceBand": "High"
+      },
+      {
+        "type": "gp",
+        "value": "Dr Lane",
+        "confidenceBand": "High"
+      },
+      {
+        "type": "siblings",
+        "value": "Max Field",
+        "confidenceBand": "High"
+      }
+    ],
+    "communications": [],
+    "conflicts": []
+  },
+  {
+    "id": "spec-case-omar-sadiq",
+    "entityId": "spec-case-omar-sadiq",
+    "name": "Omar Sadiq",
+    "nhsNumber": "777 888 2223",
+    "dateOfBirth": "2014-06-20",
+    "relationships": [
+      {
+        "type": "parent",
+        "name": "Hana Sadiq",
+        "email": "hana.sadiq@example.com",
+        "phone": null,
+        "confidenceBand": "High"
+      }
+    ],
+    "attributes": [
+      {
+        "type": "dfeId",
+        "value": "D-70004",
+        "confidenceBand": "High"
+      }
+    ],
+    "communications": [],
+    "conflicts": []
+  },
+  {
+    "id": "spec-case-leo-grant",
+    "entityId": "spec-case-leo-grant",
+    "name": "Leo Grant",
+    "nhsNumber": "666 777 9990",
+    "dateOfBirth": "2015-03-08",
+    "relationships": [
+      {
+        "type": "parent",
+        "name": "Nina Grant",
+        "email": "nina.grant@example.com",
+        "phone": null,
+        "confidenceBand": "High"
+      }
+    ],
+    "attributes": [
+      {
+        "type": "dfeId",
+        "value": "D-70005",
+        "confidenceBand": "High"
+      },
+      {
+        "type": "mosaicId",
+        "value": "M-60005",
+        "confidenceBand": "High"
+      },
+      {
+        "type": "synergyId",
+        "value": "S-6667780",
+        "confidenceBand": "High"
+      }
+    ],
+    "communications": [],
+    "conflicts": []
+  }
+]

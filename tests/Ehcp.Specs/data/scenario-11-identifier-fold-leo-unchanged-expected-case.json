@@ -1,0 +1,38 @@
+{
+  "id": "spec-case-leo-grant",
+  "entityId": "spec-case-leo-grant",
+  "name": "Leo Grant",
+  "caseId": null,
+  "nhsNumber": "666 777 9990",
+  "dateOfBirth": "2015-03-08",
+  "relationships": [
+    {
+      "type": "parent",
+      "name": "Nina Grant",
+      "email": "nina.grant@example.com",
+      "phone": null,
+      "confidenceBand": "High",
+      "userStatus": null,
+      "sourceEmailId": null
+    }
+  ],
+  "attributes": [
+    {
+      "type": "dfeId",
+      "value": "D-70005",
+      "sourceEmailId": null
+    },
+    {
+      "type": "mosaicId",
+      "value": "M-60005",
+      "sourceEmailId": null
+    },
+    {
+      "type": "synergyId",
+      "value": "S-6667780",
+      "sourceEmailId": null
+    }
+  ],
+  "communications": [],
+  "conflicts": []
+}

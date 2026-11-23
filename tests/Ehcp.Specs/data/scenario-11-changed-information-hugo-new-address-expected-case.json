@@ -1,0 +1,71 @@
+{
+  "id": "spec-case-hugo-marsh",
+  "entityId": "spec-case-hugo-marsh",
+  "name": "Hugo Marsh",
+  "caseId": null,
+  "nhsNumber": "555 666 7782",
+  "dateOfBirth": "2013-04-17",
+  "relationships": [
+    {
+      "type": "parent",
+      "name": "Rita Marsh",
+      "email": "rita.new@example.com",
+      "phone": "07700 900202",
+      "confidenceBand": "VeryLow",
+      "userStatus": null,
+      "sourceEmailId": "spec-changed-hugo-later"
+    }
+  ],
+  "attributes": [
+    {
+      "type": "dfeId",
+      "value": "D-80002",
+      "sourceEmailId": "spec-changed-hugo-earlier"
+    },
+    {
+      "type": "school",
+      "value": "Hillside Academy",
+      "sourceEmailId": "spec-changed-hugo-later"
+    },
+    {
+      "type": "gp",
+      "value": "Dr Lane",
+      "sourceEmailId": "spec-changed-hugo-earlier"
+    },
+    {
+      "type": "address",
+      "value": "9 Mill Street",
+      "sourceEmailId": "{{emailId}}"
+    }
+  ],
+  "communications": [
+    {
+      "emailId": "spec-changed-hugo-later",
+      "direction": "inbound",
+      "receivedDateTime": "2026-12-01T09:00:00+00:00",
+      "subject": "Earlier email about Hugo",
+      "summary": "Earlier summary",
+      "keyFacts": null,
+      "draftReply": null
+    },
+    {
+      "emailId": "{{emailId}}",
+      "direction": "inbound",
+      "receivedDateTime": "2026-11-01T09:00:00+00:00",
+      "subject": "{{subject}}",
+      "summary": null,
+      "keyFacts": null,
+      "draftReply": null
+    },
+    {
+      "emailId": "spec-changed-hugo-earlier",
+      "direction": "inbound",
+      "receivedDateTime": "2026-10-01T09:00:00+00:00",
+      "subject": "Earlier email about Hugo",
+      "summary": "Earlier summary",
+      "keyFacts": null,
+      "draftReply": null
+    }
+  ],
+  "conflicts": []
+}
