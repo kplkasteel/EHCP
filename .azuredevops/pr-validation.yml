@@ -25,16 +25,15 @@ steps:
       azuriteVersion: ${{ variables.azuriteVersion }}
       funcVersion: ${{ variables.funcVersion }}
 
-  # Sets TestsStarted only as rake go begins, so the publish steps skip if set-up failed first.
+  # Rake sets UnitTestsStarted and SpecsStarted as each stage begins. The publish steps check them.
   - pwsh: |
-      Write-Host "##vso[task.setvariable variable=TestsStarted]true"
       rake go
       exit $LASTEXITCODE
     displayName: Rake go (build, unit tests, specs)
     timeoutInMinutes: 30
 
   - task: PublishTestResults@2
-    condition: and(always(), eq(variables['TestsStarted'], 'true'))
+    condition: and(always(), or(eq(variables['UnitTestsStarted'], 'true'), eq(variables['SpecsStarted'], 'true')))
     inputs:
       testResultsFormat: VSTest
       testResultsFiles: '**/TestResults/*.trx'
@@ -42,7 +41,7 @@ steps:
     displayName: Publish test results
 
   - task: PublishPipelineArtifact@1
-    condition: and(always(), eq(variables['TestsStarted'], 'true'))
+    condition: and(always(), eq(variables['SpecsStarted'], 'true'))
     continueOnError: true
     inputs:
       targetPath: tests/Ehcp.Specs/TestResults

@@ -203,6 +203,7 @@ end
 
 desc 'Run unit and API tests'
 task unit: :build do
+  puts '##vso[task.setvariable variable=UnitTestsStarted]true'
   dotnet 'test', 'tests/Ehcp.Tests', '--no-build', '--logger', 'trx', '--results-directory', 'tests/Ehcp.Tests/TestResults'
 end
 
@@ -237,6 +238,7 @@ end
 
 desc 'Run Reqnroll specs against already running services (see rake up)'
 task specs: [:build, :env] do
+  puts '##vso[task.setvariable variable=SpecsStarted]true'
   ENV['EHCP_SKIP_HOST_BUILD'] = '1'
   clear_trx_results
   dotnet 'test', 'tests/Ehcp.Specs', '--no-build', '--settings', '.runsettings',
