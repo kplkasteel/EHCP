@@ -16,7 +16,7 @@ function Format-Row($name, $r) {
 
 $summary = Get-Content -LiteralPath $SummaryFile -Raw | ConvertFrom-Json
 $passed = $summary.overall -eq 'passed'
-$title = if ($passed) { 'PR validation passed' } else { 'PR validation failed' }
+$title = if ($passed) { 'PR Build and Test passed' } else { 'PR Build and Test failed' }
 # Thread status: 2 = Resolved (shown as Resolved in the PR), 1 = Active.
 $threadStatus = if ($passed) { 2 } else { 1 }
 
@@ -37,6 +37,12 @@ if ($failing) {
 }
 $lines += ''
 $lines += "[View the run]($env:SYSTEM_COLLECTIONURI$env:SYSTEM_TEAMPROJECT/_build/results?buildId=$env:BUILD_BUILDID)"
+$lines += ''
+$lines += if ($passed) {
+  '_This comment is marked as resolved because the pipeline tests passed._'
+} else {
+  '_This comment stays active until the pipeline tests pass._'
+}
 $body = $lines -join "`n"
 
 if ($DryRun) { Write-Output $body; exit 0 }
