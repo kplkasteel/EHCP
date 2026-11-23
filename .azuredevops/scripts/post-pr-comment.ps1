@@ -10,13 +10,14 @@ $ErrorActionPreference = 'Stop'
 $marker = '<!-- ehcp-pr-validation -->'
 
 function Format-Row($name, $r) {
-  if (-not $r) { return "| $name | not run | | | |" }
-  "| $name | $($r.passed) | $($r.failed) | $($r.total) | $($r.duration_s) s |"
+  if (-not $r) { return "| $name | ⚠️ Not run | | | | |" }
+  $icon = if ($r.failed -eq 0) { '✅' } else { '❌' }
+  "| $name | $icon | $($r.passed) | $($r.failed) | $($r.total) | $($r.duration_s) s |"
 }
 
 $summary = Get-Content -LiteralPath $SummaryFile -Raw | ConvertFrom-Json
 $passed = $summary.overall -eq 'passed'
-$title = if ($passed) { 'PR Build and Test passed' } else { 'PR Build and Test failed' }
+$title = if ($passed) { '✅ PR Build and Test passed' } else { '❌ PR Build and Test failed' }
 # Thread status: 2 = Resolved (shown as Resolved in the PR), 1 = Active.
 $threadStatus = if ($passed) { 2 } else { 1 }
 
@@ -24,8 +25,8 @@ $lines = @(
   $marker,
   "**$title**",
   '',
-  '| Suite | Passed | Failed | Total | Duration |',
-  '|---|---|---|---|---|',
+  '| Suite | Result | Passed | Failed | Total | Duration |',
+  '|---|---|---|---|---|---|',
   (Format-Row 'Unit tests' $summary.unit),
   (Format-Row 'Specs' $summary.specs)
 )
