@@ -19,5 +19,18 @@ foreach ($tool in $tools) {
     Write-Host ("{0,-30} {1}" -f $tool.label, $out[0])
   }
 }
+$cosmosExe = Join-Path $env:ProgramFiles 'Azure Cosmos DB Emulator\CosmosDB.Emulator.exe'
+if (Test-Path $cosmosExe) {
+  Write-Host ("{0,-30} {1}" -f 'Cosmos DB emulator', (Get-Item $cosmosExe).VersionInfo.FileVersion)
+} else {
+  $failed += 'Cosmos DB emulator'
+  Write-Host ("{0,-30} FAILED: not found at {1}" -f 'Cosmos DB emulator', $cosmosExe)
+}
+
+$csproj = Join-Path $PSScriptRoot '..\..\src\Ehcp.Infrastructure\Ehcp.Infrastructure.csproj'
+$cosmosSdk = Select-String -Path $csproj -Pattern 'Include="Microsoft\.Azure\.Cosmos"' -ErrorAction SilentlyContinue |
+  ForEach-Object { if ($_.Line -match 'Version="([^"]+)"') { $Matches[1] } } | Select-Object -First 1
+Write-Host ("{0,-30} {1}" -f 'Cosmos SDK (csproj)', $(if ($cosmosSdk) { $cosmosSdk } else { 'not found' }))
+
 if ($failed) { throw "Not runnable: $($failed -join ', ')" }
 exit 0

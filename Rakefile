@@ -1,6 +1,5 @@
 require 'fileutils'
 require 'json'
-require 'rexml/document'
 require 'net/http'
 require 'rbconfig'
 require 'socket'
@@ -187,64 +186,6 @@ def watch_services(pids)
   end
 end
 
-ARTIFACTS = 'artifacts'.freeze
-BUILD_LOG = File.join(ARTIFACTS, 'build.log').freeze
-RESULTS_JSON = File.join(ARTIFACTS, 'results.json').freeze
-# Ignores results from earlier runs when reading .trx files.
-RUN_STARTED = Time.now
-# Per stage: 'started' while running, 'passed' once it finishes. Left as 'started' if it fails.
-STAGE_RESULTS = {}
-
-# Runs a command, echoing its output to the console and saving it to log_path.
-def run_logged(cmd, log_path)
-  FileUtils.mkdir_p(File.dirname(log_path))
-  File.open(log_path, 'w') do |log|
-    IO.popen(cmd, err: [:child, :out]) do |io|
-      io.each_line { |line| print line; log.write(line) }
-    end
-  end
-  $?.success?
-end
-
-def stage(name)
-  STAGE_RESULTS[name] = 'started'
-  yield
-  STAGE_RESULTS[name] = 'passed'
-end
-
-def build_errors(path)
-  return [] unless File.exist?(path)
-  File.readlines(path).grep(/: error [A-Z]+\d+:/).map(&:strip).uniq.first(5)
-end
-
-def trx_summary(dir)
-  file = Dir.glob(File.join(dir, '*.trx')).max_by { |f| File.mtime(f) }
-  return nil unless file && File.mtime(file) >= RUN_STARTED
-  doc = REXML::Document.new(File.read(file))
-  counters = REXML::XPath.first(doc, '//Counters')
-  failed = REXML::XPath.match(doc, "//UnitTestResult[@outcome='Failed']").map { |r| r.attributes['testName'] }.uniq
-  { 'total' => counters.attributes['total'].to_i, 'passed' => counters.attributes['passed'].to_i,
-    'failed' => counters.attributes['failed'].to_i, 'failed_tests' => failed.first(20) }
-end
-
-# Writes artifacts/results.json. Called from an ensure block, so it runs on failure too.
-def write_results_summary
-  FileUtils.mkdir_p(ARTIFACTS)
-  stages = %i[restore build unit specs].to_h do |name|
-    status = STAGE_RESULTS[name]
-    [name.to_s, status == 'passed' ? 'passed' : (status ? 'failed' : 'not run')]
-  end
-  summary = {
-    'overall' => stages.values.all? { |s| s == 'passed' } ? 'passed' : 'failed',
-    'stages' => stages,
-    'build_errors' => build_errors(BUILD_LOG),
-    'unit' => trx_summary('tests/Ehcp.Tests/TestResults'),
-    'specs' => trx_summary('tests/Ehcp.Specs/TestResults')
-  }
-  File.write(RESULTS_JSON, JSON.pretty_generate(summary))
-  puts "Results summary: #{RESULTS_JSON} (overall #{summary['overall']})"
-end
-
 desc 'Set environment variables'
 task :env do
   configure_environment
@@ -252,19 +193,17 @@ end
 
 desc 'Restore packages'
 task restore: :env do
-  stage(:restore) { dotnet 'restore', SOLUTION }
+  dotnet 'restore', SOLUTION
 end
 
 desc 'Build solution'
 task build: :restore do
-  stage(:build) do
-    abort 'dotnet build failed (see artifacts/build.log)' unless run_logged(['dotnet', 'build', SOLUTION, '--no-restore'], BUILD_LOG)
-  end
+  dotnet 'build', SOLUTION, '--no-restore'
 end
 
 desc 'Run unit and API tests'
 task unit: :build do
-  stage(:unit) { dotnet 'test', 'tests/Ehcp.Tests', '--no-build', '--logger', 'trx', '--results-directory', 'tests/Ehcp.Tests/TestResults' }
+  dotnet 'test', 'tests/Ehcp.Tests', '--no-build', '--logger', 'trx', '--results-directory', 'tests/Ehcp.Tests/TestResults'
 end
 
 desc 'Run the API (Azure Functions, port 5100) in the foreground'
@@ -298,12 +237,10 @@ end
 
 desc 'Run Reqnroll specs against already running services (see rake up)'
 task specs: [:build, :env] do
-  stage(:specs) do
-    ENV['EHCP_SKIP_HOST_BUILD'] = '1'
-    clear_trx_results
-    dotnet 'test', 'tests/Ehcp.Specs', '--no-build', '--settings', '.runsettings',
-      '--logger', 'trx', '--results-directory', 'tests/Ehcp.Specs/TestResults'
-  end
+  ENV['EHCP_SKIP_HOST_BUILD'] = '1'
+  clear_trx_results
+  dotnet 'test', 'tests/Ehcp.Specs', '--no-build', '--settings', '.runsettings',
+    '--logger', 'trx', '--results-directory', 'tests/Ehcp.Specs/TestResults'
 end
 
 desc 'Run only @wip-tagged Reqnroll specs against already running services (see rake up)'
@@ -315,17 +252,12 @@ task wip: [:build, :env] do
 end
 
 desc 'Build, run unit tests, start Azurite, run Reqnroll specs (hook starts API and hosts), stop Azurite'
-task :go do
+task go: :unit do
+  azurite = start_azurite
   begin
-    Rake::Task[:unit].invoke
-    azurite = start_azurite
-    begin
-      Rake::Task[:specs].invoke
-    ensure
-      stop_process(azurite) if azurite
-    end
+    Rake::Task[:specs].invoke
   ensure
-    write_results_summary
+    stop_process(azurite) if azurite
   end
 end
 
