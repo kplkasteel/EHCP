@@ -24,20 +24,48 @@ $title = if ($passed) { '✅ PR Build and Test passed' } else { '❌ PR Build an
 # Thread status: 2 = Resolved (shown as Resolved in the PR), 1 = Active.
 $threadStatus = if ($passed) { 2 } else { 1 }
 
+# One row for the whole install range: from the first to the last step of install-tools.yml, read from this build's timeline.
+# The step names come from install-tools.yml, so steps added to that file are included automatically.
+function Get-ToolInstallRow {
+  if ($DryRun) { return }
+  # Each displayName in the template becomes a pattern. ${{ ... }} parts (such as versions) match any text.
+  $patterns = @(Select-String -Path (Join-Path $PSScriptRoot '..\templates\install-tools.yml') -Pattern '^\s*displayName:\s*(.+?)\s*$' | ForEach-Object {
+    $parts = [regex]::Split($_.Matches[0].Groups[1].Value, '\$\{\{.*?\}\}')
+    '^' + (($parts | ForEach-Object { [regex]::Escape($_) }) -join '.*') + '$'
+  })
+  try {
+    $uri = "$($env:SYSTEM_COLLECTIONURI.TrimEnd('/'))/$([uri]::EscapeDataString($env:SYSTEM_TEAMPROJECT))/_apis/build/builds/$($env:BUILD_BUILDID)/timeline?api-version=7.1"
+    $tasks = @((Invoke-RestMethod -Uri $uri -Headers @{ Authorization = "Bearer $env:SYSTEM_ACCESSTOKEN" }).records | Where-Object { $_.type -eq 'Task' })
+  } catch {
+    Write-Warning "Could not read tool install times: $($_.Exception.Message)"
+    return
+  }
+  $steps = @($tasks | Where-Object {
+    $name = $_.name
+    $_.startTime -and $_.finishTime -and @($patterns | Where-Object { $name -match $_ }).Count -gt 0
+  })
+  if ($steps.Count -eq 0) { return '| Tool install | ⚠️ Not run | | | | |' }
+  $start = [datetime](($steps | ForEach-Object { [datetime]$_.startTime } | Measure-Object -Minimum).Minimum)
+  $end = [datetime](($steps | ForEach-Object { [datetime]$_.finishTime } | Measure-Object -Maximum).Maximum)
+  "| Tool install | ✅ | | | | $([math]::Round(($end - $start).TotalSeconds, 1)) s |"
+}
+
+$buildTime = if ($summary.build_duration_s) { "$($summary.build_duration_s) s" } else { '' }
+$buildRow = switch ($summary.build) {
+  'passed' { "| Build | ✅ Passed | | | | $buildTime |" }
+  'failed' { "| Build | ❌ Failed | | | | $buildTime |" }
+  default  { '| Build | ⚠️ Not run | | | | |' }
+}
+$toolRows = @(Get-ToolInstallRow)
+
 $lines = @(
   $marker,
   "**$title**",
   '',
   '| Suite | Result | Passed | Failed | Total | Duration |',
   '|---|---|---|---|---|---|',
-  $(
-    $buildTime = if ($summary.build_duration_s) { "$($summary.build_duration_s) s" } else { '' }
-    switch ($summary.build) {
-      'passed' { "| Build | ✅ Passed | | | | $buildTime |" }
-      'failed' { "| Build | ❌ Failed | | | | $buildTime |" }
-      default  { '| Build | ⚠️ Not run | | | | |' }
-    }
-  ),
+  $buildRow
+) + $toolRows + @(
   (Format-Row 'Unit tests' $summary.unit),
   (Format-Row 'Specs' $summary.specs)
 )
