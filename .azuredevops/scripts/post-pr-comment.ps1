@@ -1,10 +1,13 @@
 # Posts or updates one PR comment with the results in artifacts/summary.json.
 # Runs only for PR builds. Uses System.AccessToken, passed in as the SYSTEM_ACCESSTOKEN environment variable.
-# The comment is found by a hidden marker, so each run updates it instead of adding a new one.
+# Each run posts a new result comment. Earlier results are kept: each one gets a reply saying a newer
+# result exists, and is resolved. The comment is found by a hidden marker.
+# -TidyOldThreads deletes earlier results that have no replies instead of keeping them.
 param(
   [string]$SummaryFile = (Join-Path $PSScriptRoot '..\..\artifacts\summary.json'),
   [switch]$FailOnError,
-  [switch]$DryRun
+  [switch]$DryRun,
+  [switch]$TidyOldThreads
 )
 $ErrorActionPreference = 'Stop'
 $marker = '<!-- ehcp-pr-validation -->'
@@ -51,9 +54,9 @@ $lines += $links -join ' | '
 Write-Host "Pull request: $prUrl"
 $lines += ''
 $lines += if ($passed) {
-  '_This comment is resolved because the pipeline tests passed. The next pipeline run will delete it, unless it has replies._'
+  '_This comment is resolved because the pipeline tests passed. A newer pipeline run will mark it superseded._'
 } else {
-  '_This comment will be deleted by the next pipeline run, unless it has replies._'
+  '_A newer pipeline run will mark this comment superseded and resolve it._'
 }
 $body = $lines -join "`n"
 
@@ -66,28 +69,29 @@ $headers = @{ Authorization = "Bearer $env:SYSTEM_ACCESSTOKEN"; 'Content-Type' =
 
 try {
   $threads = (Invoke-RestMethod -Uri "$base/threads?api-version=7.1" -Headers $headers).value
-  # Earlier results: a thread with replies is kept, and is pointed at the new comment and resolved.
-  # A thread with no replies is removed.
+  # Earlier results. By default each one is replied to and resolved, so its history stays on the PR.
+  # With -TidyOldThreads, earlier results that have no replies are deleted instead. Threads with replies are
+  # always kept, so a person's discussion isn't lost.
   $previous = @($threads | Where-Object { $_.comments.content -like "*$marker*" })
   $kept = 0; $removed = 0
   foreach ($thread in $previous) {
     $hasReplies = @($thread.comments | Where-Object { $_.content -notlike "*$marker*" -and $_.isDeleted -ne $true }).Count -gt 0
-    if ($hasReplies) {
-      # Reply and resolve once. A thread already resolved by an earlier run is left alone.
-      if ($thread.status -ne 'fixed') {
-        $reply = @{ content = 'A new comment with the latest test results has been created.'; parentCommentId = 0; commentType = 1 }
-        $null = Invoke-RestMethod -Method Post -Uri "$base/threads/$($thread.id)/comments?api-version=7.1" -Headers $headers -Body ($reply | ConvertTo-Json)
-        $null = Invoke-RestMethod -Method Patch -Uri "$base/threads/$($thread.id)?api-version=7.1" -Headers $headers -Body (@{ status = 2 } | ConvertTo-Json)
-      }
-      $kept++
-    } else {
+    if ($TidyOldThreads -and -not $hasReplies) {
       foreach ($c in ($thread.comments | Where-Object { $_.content -like "*$marker*" })) {
         $null = Invoke-RestMethod -Method Delete -Uri "$base/threads/$($thread.id)/comments/$($c.id)?api-version=7.1" -Headers $headers
       }
       $removed++
+    } else {
+      # Reply and resolve once. A thread already resolved by an earlier run is left alone.
+      if ($thread.status -ne 'fixed') {
+        $reply = @{ content = 'A newer pipeline run has superseded this result. See the latest comment.'; parentCommentId = 0; commentType = 1 }
+        $null = Invoke-RestMethod -Method Post -Uri "$base/threads/$($thread.id)/comments?api-version=7.1" -Headers $headers -Body ($reply | ConvertTo-Json)
+        $null = Invoke-RestMethod -Method Patch -Uri "$base/threads/$($thread.id)?api-version=7.1" -Headers $headers -Body (@{ status = 2 } | ConvertTo-Json)
+      }
+      $kept++
     }
   }
-  Write-Host "Earlier threads: $kept with replies (replied to and resolved), $removed removed."
+  Write-Host "Earlier threads: $kept replied to and resolved, $removed deleted."
 
   $new = @{ comments = @(@{ parentCommentId = 0; content = $body; commentType = 1 }); status = $threadStatus }
   $null = Invoke-RestMethod -Method Post -Uri "$base/threads?api-version=7.1" -Headers $headers -Body ($new | ConvertTo-Json -Depth 5)

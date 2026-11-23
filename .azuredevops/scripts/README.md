@@ -9,7 +9,7 @@ PowerShell scripts used by `pr-validation.yml` and `templates/install-tools.yml`
 | `wait-for-cosmos.ps1` | Pipeline, before tests | Waits until the emulator answers an authenticated account read over trusted TLS. |
 | `verify-toolchain.ps1` | Pipeline, before tests | Prints the version of each tool, including the Cosmos emulator and SDK. Fails if any is missing. |
 | `summarise-results.ps1` | Pipeline, after tests (always) | Reads the unit and Specs `.trx` files and writes `artifacts/summary.json`. |
-| `post-pr-comment.ps1` | Pipeline, PR builds only (always) | Posts or updates one comment on the PR, from `summary.json`. A failed post is a warning. |
+| `post-pr-comment.ps1` | Pipeline, PR builds only (always) | Posts a new comment on the PR, from `summary.json`. Earlier results are replied to and resolved, or deleted with `-TidyOldThreads`. A failed post is a warning. |
 
 ## Running locally
 
@@ -26,5 +26,8 @@ pwsh .azuredevops/scripts/post-pr-comment.ps1 -DryRun
 ## Notes
 
 - `summarise-results.ps1` maps the pipeline's `Succeeded` or `Failed` status to `passed` or `failed`.
-- `post-pr-comment.ps1` finds its comment by the hidden marker `<!-- ehcp-pr-validation -->`. Don't remove that marker from the comment text.
-- Thread status: a passing run sets the comment to Resolved. A failing run leaves it Active.
+- `post-pr-comment.ps1` finds earlier results by the hidden marker `<!-- ehcp-pr-validation -->`. Don't remove that marker from the comment text.
+- Each run posts a new comment at the bottom of the PR. It doesn't edit the old one: an edited comment stays where it was first posted, so the latest result would sit above newer discussion.
+- By default, each earlier result gets a reply ("A newer pipeline run has superseded this result") and is resolved. Its history stays on the PR.
+- `-TidyOldThreads` deletes earlier results that have no replies. Threads with replies are always kept.
+- Thread status: a passing run sets the new comment to Resolved. A failing run leaves it Active.
