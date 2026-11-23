@@ -75,7 +75,7 @@ try {
     if ($hasReplies) {
       # Reply and resolve once. A thread already resolved by an earlier run is left alone.
       if ($thread.status -ne 'fixed') {
-        $reply = @{ content = 'A new comment with the latest test results has been created below.'; parentCommentId = 0; commentType = 1 }
+        $reply = @{ content = 'A new comment with the latest test results has been created.'; parentCommentId = 0; commentType = 1 }
         $null = Invoke-RestMethod -Method Post -Uri "$base/threads/$($thread.id)/comments?api-version=7.1" -Headers $headers -Body ($reply | ConvertTo-Json)
         $null = Invoke-RestMethod -Method Patch -Uri "$base/threads/$($thread.id)?api-version=7.1" -Headers $headers -Body (@{ status = 2 } | ConvertTo-Json)
       }
