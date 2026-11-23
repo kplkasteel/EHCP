@@ -30,6 +30,9 @@ def pipeline_run?
   ENV['TF_BUILD'].to_s.casecmp?('true')
 end
 
+# Print output as it happens in the pipeline. Ruby buffers stdout when it's piped, which hides build lines.
+$stdout.sync = true if pipeline_run?
+
 # Tells the pipeline that a stage has started. Nothing is printed locally.
 def vso_set(name)
   puts "##vso[task.setvariable variable=#{name}]true" if pipeline_run?
