@@ -36,6 +36,9 @@ steps:
   # The summary and publish steps check these flags.
   - pwsh: |
       Write-Host "##vso[task.setvariable variable=RakeStarted]true"
+      # TEMPORARY: forced build failure to test the build failure path. Remove before merging.
+      Write-Host "Forced build failure for testing."
+      exit 1
       rake go
       exit $LASTEXITCODE
     displayName: Rake go (build, unit tests, specs)

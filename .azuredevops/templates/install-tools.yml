@@ -21,12 +21,6 @@ steps:
     displayName: Start Cosmos DB emulator (background)
     timeoutInMinutes: 20
 
-  # TEMPORARY: forced install failure to test the install failure path. Remove before merging.
-  - pwsh: |
-      Write-Host "Forced install failure for testing."
-      exit 1
-    displayName: TEMPORARY forced install failure
-
   # npm's default global prefix sits on the C: drive (C:\hostedtoolcache\...\node), which is slow:
   # in a controlled test Azurite plus func took about 302s on C: against about 81s on D:.
   # Pointing the prefix (installed tools) and cache (downloads) at the D: workspace avoids that.
