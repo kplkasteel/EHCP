@@ -47,7 +47,8 @@ function Get-ToolInstallRow {
   if ($steps.Count -eq 0) { return '| Tool install | ⚠️ Not run | | | | |' }
   $start = [datetime](($steps | ForEach-Object { [datetime]$_.startTime } | Measure-Object -Minimum).Minimum)
   $end = [datetime](($steps | ForEach-Object { [datetime]$_.finishTime } | Measure-Object -Maximum).Maximum)
-  "| Tool install | ✅ | | | | $([math]::Round(($end - $start).TotalSeconds, 1)) s |"
+  $icon = if (@($steps | Where-Object { $_.result -eq 'failed' }).Count -gt 0) { '❌' } else { '✅' }
+  "| Tool install | $icon | | | | $([math]::Round(($end - $start).TotalSeconds, 1)) s |"
 }
 
 $buildTime = if ($summary.build_duration_s) { "$($summary.build_duration_s) s" } else { '' }
