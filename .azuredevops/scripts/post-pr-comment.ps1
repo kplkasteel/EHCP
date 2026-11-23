@@ -51,9 +51,9 @@ $lines += $links -join ' | '
 Write-Host "Pull request: $prUrl"
 $lines += ''
 $lines += if ($passed) {
-  '_This comment is marked as resolved because the pipeline tests passed._'
+  '_This comment is resolved because the pipeline tests passed. The next pipeline run will delete it, unless it has replies._'
 } else {
-  '_This comment is updated after each pipeline run. It stays active until a run passes._'
+  '_This comment will be deleted by the next pipeline run, unless it has replies._'
 }
 $body = $lines -join "`n"
 
