@@ -5,6 +5,13 @@ pool:
 
 variables:
   - template: variables/global.yml
+  # Defaults so the summary step never receives an undefined $(...) macro. Rake overwrites these with setvariable.
+  - name: RakeStarted
+    value: 'false'
+  - name: UnitTestsStarted
+    value: 'false'
+  - name: SpecsStarted
+    value: 'false'
 
 steps:
   - pwsh: |
