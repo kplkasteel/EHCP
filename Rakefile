@@ -41,6 +41,7 @@ end
 # In the pipeline, runs dotnet and saves its output to log_path. Locally, runs dotnet exactly as before.
 def dotnet_logged(args, log_path)
   return dotnet(*args) unless pipeline_run?
+  puts "dotnet #{args.join(' ')}"
   FileUtils.mkdir_p(File.dirname(log_path))
   ok = File.open(log_path, 'w') do |log|
     IO.popen(['dotnet', *args], err: [:child, :out]) do |io|
