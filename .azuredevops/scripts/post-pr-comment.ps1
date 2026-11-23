@@ -27,6 +27,7 @@ $lines = @(
   '',
   '| Suite | Result | Passed | Failed | Total | Duration |',
   '|---|---|---|---|---|---|',
+  $(switch ($summary.build) { 'passed' { '| Build | ✅ Passed | | | | |' } 'failed' { '| Build | ❌ Failed | | | | |' } default { '| Build | ⚠️ Not run | | | | |' } }),
   (Format-Row 'Unit tests' $summary.unit),
   (Format-Row 'Specs' $summary.specs)
 )
@@ -45,7 +46,7 @@ $links = @("[View the run]($runUrl)")
 # Test results exist only if a suite ran, so link to them only then.
 if ($summary.unit -or $summary.specs) { $links += "[View tests]($testsUrl)" }
 # The TRX artifact is published only by the Specs run.
-if ($summary.specs) { $links += "[View TRX artifact]($artifactsUrl)" }
+if ($summary.specs) { $links += "[View artifacts]($artifactsUrl)" }
 $lines += $links -join ' | '
 Write-Host "Pull request: $prUrl"
 $lines += ''

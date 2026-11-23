@@ -1,10 +1,5 @@
 trigger: none
 
-# Test: queue new runs behind the running one instead of cancelling it.
-concurrency:
-  group: pr-validation
-  cancelInProgress: false
-
 pool:
   vmImage: windows-latest
 
@@ -32,6 +27,7 @@ steps:
 
   # Rake sets UnitTestsStarted and SpecsStarted as each stage begins. The publish steps check them.
   - pwsh: |
+      Write-Host "##vso[task.setvariable variable=RakeStarted]true"
       rake go
       exit $LASTEXITCODE
     displayName: Rake go (build, unit tests, specs)
@@ -55,23 +51,23 @@ steps:
       failTaskOnFailedTests: false
     displayName: Publish Specs test results
 
-  - task: PublishPipelineArtifact@1
-    condition: and(always(), eq(variables['SpecsStarted'], 'true'))
-    continueOnError: true
-    inputs:
-      targetPath: tests/Ehcp.Specs/TestResults
-      artifact: specs-results-and-logs
-    displayName: Publish spec results and host logs
-
   # Summarises the test results for the PR comment. Runs on every build, PR or not.
   - task: PowerShell@2
     condition: always()
     inputs:
       targetType: filePath
       filePath: $(Build.SourcesDirectory)/.azuredevops/scripts/summarise-results.ps1
-      arguments: -OverallStatus '$(Agent.JobStatus)'
+      arguments: -OverallStatus '$(Agent.JobStatus)' -RakeStarted '$(RakeStarted)' -UnitStarted '$(UnitTestsStarted)'
       pwsh: true
     displayName: Summarise test results
+
+  - task: PublishPipelineArtifact@1
+    condition: and(always(), eq(variables['HasTestArtifacts'], 'true'))
+    continueOnError: true
+    inputs:
+      targetPath: artifacts/test-results
+      artifact: test-results
+    displayName: Publish test artifacts
 
   # Posts or updates the PR comment. A failed post is a warning and does not fail the build.
   - task: PowerShell@2
