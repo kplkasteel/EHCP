@@ -48,3 +48,24 @@ steps:
       targetPath: tests/Ehcp.Specs/TestResults
       artifact: specs-results-and-logs
     displayName: Publish spec results and host logs
+
+  # Summarises the test results for the PR comment. Runs on every build, PR or not.
+  - task: PowerShell@2
+    condition: always()
+    inputs:
+      targetType: filePath
+      filePath: $(Build.SourcesDirectory)/.azuredevops/scripts/summarise-results.ps1
+      arguments: -OverallStatus '$(Agent.JobStatus)'
+      pwsh: true
+    displayName: Summarise test results
+
+  # Posts or updates the PR comment. A failed post is a warning and does not fail the build.
+  - task: PowerShell@2
+    condition: and(always(), eq(variables['Build.Reason'], 'PullRequest'))
+    env:
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+    inputs:
+      targetType: filePath
+      filePath: $(Build.SourcesDirectory)/.azuredevops/scripts/post-pr-comment.ps1
+      pwsh: true
+    displayName: Post PR comment
