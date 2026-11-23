@@ -28,7 +28,7 @@ Values in the AI column come from the feature file's Examples table, not from th
 | 7 Parent match | Email with a fuzzy-matching child folds on a parent match and stays pending without one | 5 | Oliver Hughes, Amelia Khan | `scenario-7-low-match-relationships-*` |
 | 8 Identifier differs | Email with a child whose identifier differs from the matched case is a conflict | 5 | Isla Patel, Ivy Chen | `scenario-8-low-match-identifier-mismatch-*` |
 | 9 Date of birth | Email with a child matching on date of birth folds on a parent match and stays pending without one | 4 | Noah Williams, Zara Ahmed | `scenario-9-low-match-dob-*` |
-| 10 Identifier conflicts (US-0008) | Email with a child whose identifiers conflict with existing cases lists the matching cases and flags each one | 9 | Ethan Clarke, Mia Roberts, Zoe Ward, Ava Turner | `scenario-10-identifier-conflict-*` |
+| 10 Identifier conflicts (US-0008) | Email with a child whose identifiers conflict with existing cases lists the matching cases and flags each one | 10 | Ethan Clarke, Mia Roberts, Zoe Ward, Ava Turner | `scenario-10-identifier-conflict-*` |
 
 `scenario-6-no-dob-match-possible-matches-*` exists here but no scenario in `GetEmail.feature` uses it. Treat it as unused until it is either wired in or removed.
 
@@ -199,6 +199,7 @@ Every conflict example uses the name Ethan Clarke, parent Laura Clarke, laura.cl
 | `spec-i-nhs-dfe-differs` | NHS 555 666 7778; DfE D-69999 | Conflict; Ethan High 26 | Ethan: High, "NHS number matches; DfE ID does not match" | 4, 5, 5a |
 | `spec-i-nhs-mosaic-differs` | NHS 555 666 7778; Mosaic M-59999 | Conflict; Ethan High 26 | Ethan: High, "NHS number matches; Mosaic ID does not match" | 4, 5, 5a |
 | `spec-i-dfe-nhs-differs` | NHS 999 999 9999; DfE D-60001 | Conflict; Ethan High 26 | Ethan: High, "DfE ID matches; NHS number does not match" | 4, 5, 5a |
+| `spec-i-synergy-nhs-differs` | NHS 999 999 9999; Synergy S-5556667 | Conflict; Ethan High 26 | Ethan: High, "Synergy ID matches; NHS number does not match" | 4, 5, 5a |
 | `spec-i-mosaic-nhs-differs` | NHS 999 999 9999; Mosaic M-50001 | Conflict; Ethan High 26 | Ethan: High, "Mosaic ID matches; NHS number does not match" | 4, 5, 5a |
 | `spec-i-nhs-dob-differs` | NHS 555 666 7778; DOB 2016-04-11 | Conflict; Ethan Medium 19 | Ethan: Medium, "NHS number matches; Date of birth does not match" | 4, 5, 5a |
 | `spec-i-nhs-two-ids-differ` | NHS 555 666 7778; Synergy S-9999999; DfE D-69999 | Conflict; Ethan High 26 | Ethan: High, "NHS number matches; Synergy ID and DfE ID do not match" | 4, 5, 5a |
