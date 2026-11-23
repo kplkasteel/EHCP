@@ -39,7 +39,14 @@ if ($failing) {
 $lines += ''
 $prUrl = "$($env:SYSTEM_COLLECTIONURI)$($env:SYSTEM_TEAMPROJECT)/_git/$($env:BUILD_REPOSITORY_NAME)/pullrequest/$($env:SYSTEM_PULLREQUEST_PULLREQUESTID)"
 $runUrl = "$($env:SYSTEM_COLLECTIONURI)$($env:SYSTEM_TEAMPROJECT)/_build/results?buildId=$($env:BUILD_BUILDID)"
-$lines += "[View the run]($runUrl)"
+$testsUrl = "$runUrl&view=ms.vss-test-web.build-test-results-tab"
+$artifactsUrl = "$runUrl&view=artifacts&type=publishedArtifacts"
+$links = @("[View the run]($runUrl)")
+# Test results exist only if a suite ran, so link to them only then.
+if ($summary.unit -or $summary.specs) { $links += "[View tests]($testsUrl)" }
+# The TRX artifact is published only by the Specs run.
+if ($summary.specs) { $links += "[View TRX artifact]($artifactsUrl)" }
+$lines += $links -join ' | '
 Write-Host "Pull request: $prUrl"
 $lines += ''
 $lines += if ($passed) {

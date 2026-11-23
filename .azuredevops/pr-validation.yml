@@ -33,12 +33,22 @@ steps:
     timeoutInMinutes: 30
 
   - task: PublishTestResults@2
-    condition: and(always(), or(eq(variables['UnitTestsStarted'], 'true'), eq(variables['SpecsStarted'], 'true')))
+    condition: and(always(), eq(variables['UnitTestsStarted'], 'true'))
     inputs:
       testResultsFormat: VSTest
-      testResultsFiles: '**/TestResults/*.trx'
+      testResultsFiles: 'tests/Ehcp.Tests/TestResults/*.trx'
+      testRunTitle: 'Unit tests'
       failTaskOnFailedTests: false
-    displayName: Publish test results
+    displayName: Publish unit test results
+
+  - task: PublishTestResults@2
+    condition: and(always(), eq(variables['SpecsStarted'], 'true'))
+    inputs:
+      testResultsFormat: VSTest
+      testResultsFiles: 'tests/Ehcp.Specs/TestResults/*.trx'
+      testRunTitle: 'Specs'
+      failTaskOnFailedTests: false
+    displayName: Publish Specs test results
 
   - task: PublishPipelineArtifact@1
     condition: and(always(), eq(variables['SpecsStarted'], 'true'))
