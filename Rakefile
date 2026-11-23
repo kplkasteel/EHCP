@@ -25,8 +25,19 @@ def dotnet(*args)
   sh 'dotnet', *args
 end
 
-# Runs dotnet, echoing its output to the console and saving it to log_path. Aborts if dotnet fails.
+# Azure Pipelines sets TF_BUILD=True on every agent. Local runs leave it unset.
+def pipeline_run?
+  ENV['TF_BUILD'].to_s.casecmp?('true')
+end
+
+# Tells the pipeline that a stage has started. Nothing is printed locally.
+def vso_set(name)
+  puts "##vso[task.setvariable variable=#{name}]true" if pipeline_run?
+end
+
+# In the pipeline, runs dotnet and saves its output to log_path. Locally, runs dotnet exactly as before.
 def dotnet_logged(args, log_path)
+  return dotnet(*args) unless pipeline_run?
   FileUtils.mkdir_p(File.dirname(log_path))
   ok = File.open(log_path, 'w') do |log|
     IO.popen(['dotnet', *args], err: [:child, :out]) do |io|
@@ -215,8 +226,9 @@ end
 
 desc 'Run unit and API tests'
 task unit: :build do
-  puts '##vso[task.setvariable variable=UnitTestsStarted]true'
-  dotnet 'test', 'tests/Ehcp.Tests', '--no-build', '--logger', 'trx', '--results-directory', 'tests/Ehcp.Tests/TestResults'
+  vso_set('UnitTestsStarted')
+  trx = pipeline_run? ? ['--logger', 'trx', '--results-directory', 'tests/Ehcp.Tests/TestResults'] : []
+  dotnet 'test', 'tests/Ehcp.Tests', '--no-build', *trx
 end
 
 desc 'Run the API (Azure Functions, port 5100) in the foreground'
@@ -250,7 +262,7 @@ end
 
 desc 'Run Reqnroll specs against already running services (see rake up)'
 task specs: [:build, :env] do
-  puts '##vso[task.setvariable variable=SpecsStarted]true'
+  vso_set('SpecsStarted')
   ENV['EHCP_SKIP_HOST_BUILD'] = '1'
   clear_trx_results
   dotnet 'test', 'tests/Ehcp.Specs', '--no-build', '--settings', '.runsettings',
