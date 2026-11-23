@@ -25,6 +25,18 @@ def dotnet(*args)
   sh 'dotnet', *args
 end
 
+# Runs dotnet, echoing its output to the console and saving it to log_path. Aborts if dotnet fails.
+def dotnet_logged(args, log_path)
+  FileUtils.mkdir_p(File.dirname(log_path))
+  ok = File.open(log_path, 'w') do |log|
+    IO.popen(['dotnet', *args], err: [:child, :out]) do |io|
+      io.each_line { |line| print line; log.write(line) }
+    end
+    $?.success?
+  end
+  abort "dotnet #{args.first} failed (see #{log_path})" unless ok
+end
+
 # Azure sandbox. Must already exist; override with EHCP_RESOURCE_GROUP.
 RESOURCE_GROUP = ENV.fetch('EHCP_RESOURCE_GROUP', 'jamie-lupton-sandbox-rg')
 AZ_DEPLOYMENT = 'ehcp'
@@ -193,12 +205,12 @@ end
 
 desc 'Restore packages'
 task restore: :env do
-  dotnet 'restore', SOLUTION
+  dotnet_logged(['restore', SOLUTION], 'artifacts/build/restore.log')
 end
 
 desc 'Build solution'
 task build: :restore do
-  dotnet 'build', SOLUTION, '--no-restore'
+  dotnet_logged(['build', SOLUTION, '--no-restore'], 'artifacts/build/build.log')
 end
 
 desc 'Run unit and API tests'

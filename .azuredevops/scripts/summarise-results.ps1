@@ -65,6 +65,10 @@ $hostLogs = Join-Path $PSScriptRoot '..\..\tests\Ehcp.Specs\TestResults\local-st
 if (Test-Path $hostLogs) {
   Copy-Item -Path $hostLogs -Destination (Join-Path $artifactDir 'host-logs') -Recurse -Force
 }
+$buildLogs = Join-Path (Split-Path $OutFile) 'build'
+if (Test-Path $buildLogs) {
+  Copy-Item -Path $buildLogs -Destination (Join-Path $artifactDir 'build') -Recurse -Force
+}
 # Tell the pipeline whether there is anything to upload, so the artifact step can skip when there isn't.
 if (Get-ChildItem -Path $artifactDir -Recurse -File -ErrorAction SilentlyContinue) {
   Write-Host '##vso[task.setvariable variable=HasTestArtifacts]true'
