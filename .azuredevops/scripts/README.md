@@ -1,6 +1,6 @@
 # Pipeline scripts
 
-PowerShell scripts used by `pr-validation.yml` and `templates/install-tools.yml`. All run on PowerShell 7 (`pwsh`).
+PowerShell scripts used by `pr-build-and-test.yml` and `templates/install-tools.yml`. All run on PowerShell 7 (`pwsh`).
 
 | Script | Runs | Purpose |
 |---|---|---|

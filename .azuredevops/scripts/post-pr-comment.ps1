@@ -42,7 +42,7 @@ function Get-ToolInstallRow {
   }
   $steps = @($tasks | Where-Object {
     $name = $_.name
-    $_.startTime -and $_.finishTime -and @($patterns | Where-Object { $name -match $_ }).Count -gt 0
+    $_.result -ne 'skipped' -and $_.startTime -and $_.finishTime -and @($patterns | Where-Object { $name -match $_ }).Count -gt 0
   })
   if ($steps.Count -eq 0) { return '| Tool install | ⚠️ Not run | | | | |' }
   $start = [datetime](($steps | ForEach-Object { [datetime]$_.startTime } | Measure-Object -Minimum).Minimum)
