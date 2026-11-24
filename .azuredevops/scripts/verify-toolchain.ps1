@@ -8,8 +8,6 @@ $tools = @(
   @{ n = 'func';    a = '--version'; label = 'Azure Functions Core Tools' }
 )
 
-## test
-
 $failed = @()
 foreach ($tool in $tools) {
   $out = @(& $tool.n $tool.a 2>&1)
