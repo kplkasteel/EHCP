@@ -15,7 +15,7 @@ Feature: Retrieve email
     Given the mailbox "ehcp-team-shared-1" is selected
     And the database is setup to contain an email with id "spec-email-005" and processing status "Processed"
     When a request is made to the /mailbox/"ehcp-team-shared-1"/emails/"spec-email-005" endpoint
-    Then the email record should be retrieved with processing status "Unprocessed"
+    Then the email record should be retrieved with processing status "Processed"
     When a request is made to the /mailbox/"ehcp-team-shared-2"/emails/"spec-email-005" endpoint
     Then the response should be not found
 

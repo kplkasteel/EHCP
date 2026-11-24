@@ -5,7 +5,7 @@ internal static class TemporaryWarningProbe
 {
     public static int Value()
     {
-        int unused = 5;
+        int unused = UndefinedTemporaryName;
         return 1;
     }
 }
