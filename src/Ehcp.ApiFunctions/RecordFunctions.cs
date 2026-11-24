@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Ehcp.Core;
 using Ehcp.Infrastructure;
 using Microsoft.Azure.Functions.Worker;
@@ -76,7 +77,18 @@ public sealed class RecordFunctions(
         HttpResponseData response = req.CreateResponse(HttpStatusCode.OK);
         response.Headers.Add("Content-Type", "application/json; charset=utf-8");
         response.Headers.Add("ETag", etag);
+
+        // Enforce the public GetCase response contract at the HTTP boundary.
+        // Older Cosmos records may contain "caseId": null, but the API omits that
+        // property when no external case identifier exists. Other nulls must remain.
+        // Keep this explicit instead of enabling global WhenWritingNull.
+        //JsonNode? body = JsonSerializer.SerializeToNode(value, CosmosDocumentStore<EmailDocument>.JsonOptions);
+        //if (value is CaseDocument caseDocument && caseDocument.CaseId is null && body is JsonObject caseJson)
+        //    caseJson.Remove("caseId");
+
+        //await response.WriteStringAsync(body?.ToJsonString(CosmosDocumentStore<EmailDocument>.JsonOptions) ?? "null");
         await response.WriteStringAsync(JsonSerializer.Serialize(value, CosmosDocumentStore<EmailDocument>.JsonOptions));
+
         return response;
     }
 

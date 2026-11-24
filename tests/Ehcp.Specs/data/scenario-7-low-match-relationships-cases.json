@@ -3,7 +3,6 @@
     "id": "spec-case-oliver-hughes",
     "entityId": "spec-case-oliver-hughes",
     "name": "Oliver Hughes",
-    "caseId": "S-2223334",
     "nhsNumber": "222 333 4445",
     "dateOfBirth": "2018-06-12",
     "relationships": [
@@ -28,7 +27,6 @@
     "id": "spec-case-amelia-khan",
     "entityId": "spec-case-amelia-khan",
     "name": "Amelia Khan",
-    "caseId": "S-2223335",
     "nhsNumber": "222 333 5556",
     "dateOfBirth": "2018-06-12",
     "relationships": [
