@@ -22,7 +22,7 @@ public sealed partial class GetEmailSteps
     private static readonly Regex TokenPattern = new(@"\{\{(\w+)(:json)?\}\}", RegexOptions.Compiled);
     private static readonly HashSet<string> TypedIdentifiers = new(StringComparer.Ordinal)
     {
-        "childName", "nhsNumber", "caseId", "dateOfBirth"
+        "childName", "nhsNumber", "dateOfBirth"
     };
 
     private Dictionary<string, string> _scenarioValues = new(StringComparer.Ordinal);
@@ -76,7 +76,6 @@ public sealed partial class GetEmailSteps
             ["childName"] = childName,
             ["childLabel"] = childLabel,
             ["nhsNumber"] = identifiers.GetValueOrDefault("nhsNumber"),
-            ["caseId"] = identifiers.GetValueOrDefault("caseId"),
             ["expectedStatus"] = _scenarioValues.GetValueOrDefault("expectedStatus", "PendingMatch"),
             ["expectedCaseId"] = _scenarioValues.GetValueOrDefault("expectedCaseId") is string id && id.Length > 0 ? id : null,
             ["dateOfBirth"] = identifiers.GetValueOrDefault("dateOfBirth"),

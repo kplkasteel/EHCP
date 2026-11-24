@@ -9,7 +9,6 @@
       "name": "Alex Example",
       "status": "PendingMatch",
       "nhsNumber": null,
-      "caseId": null,
       "dateOfBirth": "2016-03-14",
       "matchedCaseId": null,
       "possibleCaseMatches": [],

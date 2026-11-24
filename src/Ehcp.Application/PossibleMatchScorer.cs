@@ -11,7 +11,7 @@ internal static class PossibleMatchScorer
         new("NHS Number", 10, (child, candidate) =>
             Shares(StrongIdentifiers.From(child).NhsNumbers, StrongIdentifiers.From(candidate).NhsNumbers)),
         new("Synergy Number / Synergy ID", 10, (child, candidate) =>
-            Shares(StrongIdentifiers.From(child).CaseIds, StrongIdentifiers.From(candidate).CaseIds)),
+            Shares(StrongIdentifiers.From(child).SynergyId, StrongIdentifiers.From(candidate).SynergyId)),
         new("DfE UPN", 10, (child, candidate) =>
             Shares(StrongIdentifiers.From(child).DfeIds, StrongIdentifiers.From(candidate).DfeIds)),
         new("Mosaic ID", 10, (child, candidate) =>
