@@ -3,7 +3,6 @@
     "id": "spec-case-noah-williams",
     "entityId": "spec-case-noah-williams",
     "name": "Noah Williams",
-    "caseId": "S-4445556",
     "nhsNumber": "444 555 6667",
     "dateOfBirth": "2019-05-05",
     "relationships": [
@@ -28,7 +27,6 @@
     "id": "spec-case-zara-ahmed",
     "entityId": "spec-case-zara-ahmed",
     "name": "Zara Ahmed",
-    "caseId": "S-4445557",
     "nhsNumber": "444 555 7778",
     "dateOfBirth": "2016-01-20",
     "relationships": [

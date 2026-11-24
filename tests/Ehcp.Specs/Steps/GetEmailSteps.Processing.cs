@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Azure.Storage.Queues;
@@ -45,6 +46,7 @@ public sealed partial class GetEmailSteps
     private GraphSeedMessage? _pendingGraphMessage;
     private string? _processingMailboxId;
     private string? _processingEmailId;
+    private bool _processingCompleted;
 
     [Given("the database is setup to contain {string}")]
     public async Task GivenTheDatabaseIsSetupToContainDataset(string dataset)
@@ -125,6 +127,7 @@ public sealed partial class GetEmailSteps
             CosmosDocumentStore<EmailDocument>.JsonOptions);
         _processingMailboxId = message.MailboxId;
         _processingEmailId = message.EmailId;
+        _processingCompleted = false;
         await queue.SendMessageAsync(payload);
     }
 
@@ -136,6 +139,7 @@ public sealed partial class GetEmailSteps
         EmailProcessingStatus expected = Enum.Parse<EmailProcessingStatus>(status);
         var store = new CosmosDocumentStore<EmailDocument>(_client, _settings);
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var watch = Stopwatch.StartNew();
         EmailProcessingStatus? last = null;
         try
         {
@@ -145,13 +149,19 @@ public sealed partial class GetEmailSteps
                 {
                     StoredDocument<EmailDocument> stored = await store.ReadAsync(_processingMailboxId, _processingEmailId, timeout.Token);
                     last = stored.Document.Status;
-                    if (last == expected) return;
+                    if (last == expected)
+                    {
+                        _processingCompleted = true;
+                        _output.WriteLine($"[PROCESSING WAIT] {watch.ElapsedMilliseconds} ms, email={_processingEmailId}, status={last}");
+                        return;
+                    }
                 }
                 catch (DocumentStoreException error) when (error.Failure == StoreFailure.NotFound) { }
                 await Task.Delay(TimeSpan.FromMilliseconds(500), timeout.Token);
             }
         }
         catch (OperationCanceledException) when (timeout.IsCancellationRequested) { }
+        _output.WriteLine($"[PROCESSING WAIT] {watch.ElapsedMilliseconds} ms, email={_processingEmailId}, lastStatus={last?.ToString() ?? "(document not found)"}");
         Assert.Fail($"Timed out waiting for '{_processingEmailId}' to reach status '{status}'. " +
             $"Last observed status: {last?.ToString() ?? "(document not found)"}. " +
             "Is the Ehcp.Processing function host running against the same Azurite instance?");
@@ -163,12 +173,8 @@ public sealed partial class GetEmailSteps
         Assert.NotNull(_response);
         Assert.Equal(System.Net.HttpStatusCode.OK, _response.StatusCode);
 
-        JsonNode? actual = JsonNode.Parse(
-            await _response.Content.ReadAsStringAsync());
-
-        JsonNode? expected = JsonNode.Parse(
-            await RenderDatasetAsync(dataset));
-
+        JsonNode? actual = JsonNode.Parse(await _response.Content.ReadAsStringAsync());
+        JsonNode? expected = JsonNode.Parse(await RenderDatasetAsync(dataset));
         Assert.NotNull(actual);
         Assert.NotNull(expected);
         AssertSameReceivedDateTime(expected, actual);
@@ -180,14 +186,11 @@ public sealed partial class GetEmailSteps
         Assert.Equal(expectedChildren.Count, actualChildren.Count);
         List<string> matchReport = WriteMatchReport(expectedChildren, actualChildren);
         for (int i = 0; i < actualChildren.Count; i++)
-        {
             _output.WriteLine($"[ACTUAL CHILD {i}] status={actualChildren[i]?["status"]} matchedCaseId={actualChildren[i]?["matchedCaseId"] ?? "null"}");
-        }
         for (int i = 0; i < expectedChildren.Count; i++)
         {
             JsonNode? expectedId = expectedChildren[i]?["matchedCaseId"];
             if (expectedId is null) continue;
-
             string alias = expectedId.GetValue<string>();
             string? actualId = actualChildren[i]?["matchedCaseId"]?.GetValue<string>();
             Assert.False(string.IsNullOrWhiteSpace(actualId), $"Expected a case ID for '{alias}'.");
@@ -200,7 +203,6 @@ public sealed partial class GetEmailSteps
 
         ProjectAttributes(expected, actual);
         var options = new JsonSerializerOptions { WriteIndented = true };
-
         Assert.True(JsonNode.DeepEquals(expected, actual),
             $"Response did not match '{dataset}'.\n" +
             string.Join("\n", matchReport) + "\n" +
@@ -257,10 +259,10 @@ public sealed partial class GetEmailSteps
         if (_settings.Database != LocalTestStack.DatabaseName || string.IsNullOrEmpty(LocalTestStack.DatabaseName))
             throw new InvalidOperationException("Refusing to clean up a database not owned by this test run.");
 
-        // A passing scenario has already waited for its final status, so the host is idle and stays running.
-        // A failed scenario may leave a message in flight, so the host is restarted to stop it.
+        // Failed assertions after processing completes cannot leave this scenario's message in flight.
+        // Restart the worker only if a scenario failed before reaching the expected terminal status.
         bool processingWasStarted = _processingEmailId is not null;
-        bool restartProcessing = processingWasStarted && scenario.TestError is not null;
+        bool restartProcessing = processingWasStarted && scenario.TestError is not null && !_processingCompleted;
         if (restartProcessing) LocalTestStack.StopProcessing();
 
         if (processingWasStarted)
@@ -316,14 +318,9 @@ public sealed partial class GetEmailSteps
     {
         string json = JsonSerializer.Serialize(
             payload, CosmosDocumentStore<EmailDocument>.JsonOptions);
-
-        using var content = new StringContent(
-            json, System.Text.Encoding.UTF8, "application/json");
-
+        using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
         using HttpResponseMessage response = await SeedHttp.PostAsync(
             $"{baseUrl.TrimEnd('/')}/api/seed", content);
-
         response.EnsureSuccessStatusCode();
     }
-
 }

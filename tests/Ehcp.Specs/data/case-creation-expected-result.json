@@ -9,7 +9,6 @@
       "name": {{childName:json}},
       "status": "Folded",
       "nhsNumber": {{nhsNumber:json}},
-      "caseId": null,
       "dateOfBirth": {{dateOfBirth:json}},
       "matchedCaseId": "{{caseAlias}}",
       "possibleCaseMatches": [],
