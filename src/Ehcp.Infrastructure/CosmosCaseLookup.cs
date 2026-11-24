@@ -23,7 +23,7 @@ public sealed class CosmosCaseLookup(CosmosClient client, CosmosSettings setting
                                                       OR (@name != "" AND @dob != "" AND UPPER(TRIM(c.name)) = @name AND c.dateOfBirth = @dob)
                                                     """)
             .WithParameter("@nhs", Normalize(child.NhsNumber))
-            .WithParameter("@caseIds", identifiers.CaseIds)
+            .WithParameter("@caseIds", identifiers.SynergyId)
             .WithParameter("@dfeIds", identifiers.DfeIds)
             .WithParameter("@mosaicIds", identifiers.MosaicIds)
             .WithParameter("@name", Normalize(child.Name))

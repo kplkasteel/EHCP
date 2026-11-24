@@ -340,7 +340,7 @@ public sealed class MatchingService(
     // This priority order is part of the ID contract: changing it would give existing children new case IDs.
     private static string PrimaryIdentity(StrongIdentifiers identifiers) =>
         identifiers.NhsNumbers.Count > 0 ? "nhs:" + identifiers.NhsNumbers[0]
-        : identifiers.CaseIds.Count > 0 ? "case:" + identifiers.CaseIds[0]
+        : identifiers.SynergyId.Count > 0 ? "case:" + identifiers.SynergyId[0]
         : identifiers.DfeIds.Count > 0 ? "dfe:" + identifiers.DfeIds[0]
         : "mosaic:" + identifiers.MosaicIds[0];
 

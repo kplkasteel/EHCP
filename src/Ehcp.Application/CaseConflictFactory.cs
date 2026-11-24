@@ -24,7 +24,7 @@ internal static class CaseConflictFactory
         var differing = new List<string>();
 
         Compare("NHS number", incoming.NhsNumbers, existing.NhsNumbers, matched, differing);
-        Compare("Synergy ID", incoming.CaseIds, existing.CaseIds, matched, differing);
+        Compare("Synergy ID", incoming.SynergyId, existing.SynergyId, matched, differing);
         Compare("DfE ID", incoming.DfeIds, existing.DfeIds, matched, differing);
         Compare("Mosaic ID", incoming.MosaicIds, existing.MosaicIds, matched, differing);
 

@@ -82,11 +82,13 @@ public sealed class RecordFunctions(
         // Older Cosmos records may contain "caseId": null, but the API omits that
         // property when no external case identifier exists. Other nulls must remain.
         // Keep this explicit instead of enabling global WhenWritingNull.
-        JsonNode? body = JsonSerializer.SerializeToNode(value, CosmosDocumentStore<EmailDocument>.JsonOptions);
-        if (value is CaseDocument caseDocument && caseDocument.CaseId is null && body is JsonObject caseJson)
-            caseJson.Remove("caseId");
+        //JsonNode? body = JsonSerializer.SerializeToNode(value, CosmosDocumentStore<EmailDocument>.JsonOptions);
+        //if (value is CaseDocument caseDocument && caseDocument.CaseId is null && body is JsonObject caseJson)
+        //    caseJson.Remove("caseId");
 
-        await response.WriteStringAsync(body?.ToJsonString(CosmosDocumentStore<EmailDocument>.JsonOptions) ?? "null");
+        //await response.WriteStringAsync(body?.ToJsonString(CosmosDocumentStore<EmailDocument>.JsonOptions) ?? "null");
+        await response.WriteStringAsync(JsonSerializer.Serialize(value, CosmosDocumentStore<EmailDocument>.JsonOptions));
+
         return response;
     }
 

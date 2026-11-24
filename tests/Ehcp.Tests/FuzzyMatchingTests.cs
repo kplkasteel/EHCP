@@ -190,7 +190,7 @@ public sealed class FuzzyMatchingTests
             {
                 StrongIdentifiers target = StrongIdentifiers.From(candidate);
                 return Shared(source.NhsNumbers, target.NhsNumbers)
-                    || Shared(source.CaseIds, target.CaseIds)
+                    || Shared(source.SynergyId, target.SynergyId)
                     || Shared(source.DfeIds, target.DfeIds)
                     || Shared(source.MosaicIds, target.MosaicIds)
                     || (child.DateOfBirth != null && child.DateOfBirth == candidate.DateOfBirth
