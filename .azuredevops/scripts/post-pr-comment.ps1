@@ -35,7 +35,9 @@ function Get-ToolInstallRow {
   })
   try {
     $uri = "$($env:SYSTEM_COLLECTIONURI.TrimEnd('/'))/$([uri]::EscapeDataString($env:SYSTEM_TEAMPROJECT))/_apis/build/builds/$($env:BUILD_BUILDID)/timeline?api-version=7.1"
-    $tasks = @((Invoke-RestMethod -Uri $uri -Headers @{ Authorization = "Bearer $env:SYSTEM_ACCESSTOKEN" }).records | Where-Object { $_.type -eq 'Task' })
+    $timeline = Invoke-RestMethod -Uri $uri -Headers @{ Authorization = "Bearer $env:SYSTEM_ACCESSTOKEN" }
+    if ($timeline -is [string]) { throw 'Azure DevOps returned a web page, not data.' }
+    $tasks = @($timeline.records | Where-Object { $_.type -eq 'Task' })
   } catch {
     Write-Warning "Could not read tool install times: $($_.Exception.Message)"
     return
@@ -104,7 +106,10 @@ $base = "$org/$project/_apis/git/repositories/$env:BUILD_REPOSITORY_ID/pullReque
 $headers = @{ Authorization = "Bearer $env:SYSTEM_ACCESSTOKEN"; 'Content-Type' = 'application/json' }
 
 try {
-  $threads = (Invoke-RestMethod -Uri "$base/threads?api-version=7.1" -Headers $headers).value
+  $threadsResponse = Invoke-RestMethod -Uri "$base/threads?api-version=7.1" -Headers $headers
+  # A bad token or repo ID returns a sign-in web page with HTTP 200, not an error. Treat that as a failure.
+  if ($threadsResponse -is [string]) { throw 'Azure DevOps returned a web page, not data. Check the access token and repository ID.' }
+  $threads = $threadsResponse.value
   # Earlier results. By default each one is replied to and resolved, so its history stays on the PR.
   # With -TidyOldThreads, earlier results that have no replies are deleted instead. Threads with replies are
   # always kept, so a person's discussion isn't lost.
@@ -135,7 +140,8 @@ try {
   Write-Host "Earlier threads: $kept replied to and resolved, $skipped already superseded, $removed deleted."
 
   $new = @{ comments = @(@{ parentCommentId = 0; content = $body; commentType = 1 }); status = $threadStatus }
-  $null = Invoke-RestMethod -Method Post -Uri "$base/threads?api-version=7.1" -Headers $headers -Body ($new | ConvertTo-Json -Depth 5)
+  $created = Invoke-RestMethod -Method Post -Uri "$base/threads?api-version=7.1" -Headers $headers -Body ($new | ConvertTo-Json -Depth 5)
+  if ($created -is [string]) { throw 'Azure DevOps returned a web page, not data. Check the access token and repository ID.' }
   Write-Host 'Posted PR comment.'
 } catch {
   if ($FailOnError) { throw }
