@@ -113,7 +113,9 @@ internal static class LocalTestStack
     {
         // Apply before any scenario bindings are constructed; child processes inherit these values.
         string runId = Guid.NewGuid().ToString("N");
-        DatabaseName = "ehcp-specs-" + runId;
+        // Reuse one dedicated local test database across test runs.
+        // Scenario cleanup removes fixture documents; it never drops the database or containers.
+        DatabaseName = "ehcp-specs-local";
         queueName = "ehcp-specs-" + runId;
         var values = new Dictionary<string, string>
         {
@@ -362,15 +364,11 @@ internal static class LocalTestStack
         try
         {
             if (!started) return;
-            // Guarded by started: a remote run never reaches here, so the deployed database is not deleted.
+            // Only clean the run-specific queues. Keep the dedicated local Cosmos test database.
             StopProcessing();
             var queues = new QueueServiceClient("UseDevelopmentStorage=true");
             await queues.GetQueueClient(queueName).DeleteIfExistsAsync();
             await queues.GetQueueClient(queueName + "-poison").DeleteIfExistsAsync();
-            using var cosmos = new CosmosClient("https://localhost:8081", Environment.GetEnvironmentVariable("Cosmos__Key"),
-                new CosmosClientOptions { ConnectionMode = ConnectionMode.Gateway });
-            try { await cosmos.GetDatabase(DatabaseName).DeleteAsync(); }
-            catch (CosmosException error) when (error.StatusCode == HttpStatusCode.NotFound) { }
         }
         finally
         {

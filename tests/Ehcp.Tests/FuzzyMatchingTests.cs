@@ -127,6 +127,33 @@ public sealed class FuzzyMatchingTests
         Assert.Empty(result.PossibleCaseMatches);
     }
 
+    [Fact]
+    public async Task ConflictingStrongIdentifierIsRecordedOnceOnTheMatchedCase()
+    {
+        CaseDocument[] documents = Cases();
+        var store = new InMemoryCaseStore(documents);
+        var matcher = new MatchingService(new FixtureLookup(documents), store, NullLogger<MatchingService>.Instance);
+        var child = new ExtractedChild("Fred Bloggs", "999 999 9999", null, new DateOnly(2020, 3, 1), [],
+            [new("dfeId", "D-20001", ConfidenceBand.High)]);
+        var email = new EmailDocument("spec-email", "spec-thread", Direction.inbound,
+            new DateTimeOffset(2026, 11, 1, 9, 0, 0, TimeSpan.Zero), []);
+        var graph = new GraphEmail("graph-id", "spec-thread", Direction.inbound,
+            email.ReceivedDateTime, "test", "test");
+
+        ChildResult first = await matcher.MatchAsync(Mailbox, email, graph, new EmailExtraction([child]), child, default);
+        ChildResult retry = await matcher.MatchAsync(Mailbox, email, graph, new EmailExtraction([child]), child, default);
+
+        Assert.Equal(ChildStatus.Conflict, first.Status);
+        Assert.Equal(ChildStatus.Conflict, retry.Status);
+        CaseDocument flagged = (await store.ReadAsync(Mailbox, "spec-case-fred-bloggs", default)).Document;
+        Conflict conflict = Assert.Single(flagged.Conflicts);
+        Assert.Equal("spec-email", conflict.EmailId);
+        Assert.Equal(ConfidenceBand.High, conflict.ConfidenceBand);
+        Assert.Equal("DfE ID matches; NHS number does not match", conflict.MatchedOn);
+        Assert.NotEqual(default, conflict.FlaggedAt);
+        Assert.Empty((await store.ReadAsync(Mailbox, "spec-case-jones-smith", default)).Document.Conflicts);
+    }
+
     private static async Task<ChildResult> MatchAsync(
         string? name, string? dob, string? nhs = null, string? caseId = null,
         string? dfe = null, string? mosaic = null, string? synergy = null)
