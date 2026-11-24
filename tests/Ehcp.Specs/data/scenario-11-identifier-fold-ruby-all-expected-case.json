@@ -2,7 +2,6 @@
   "id": "spec-case-ruby-evans",
   "entityId": "spec-case-ruby-evans",
   "name": "Ruby Evans",
-  "caseId": null,
   "nhsNumber": "666 777 8889",
   "dateOfBirth": "2015-07-19",
   "relationships": [

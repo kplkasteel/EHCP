@@ -2,7 +2,6 @@
   "id": "spec-case-freya-nolan",
   "entityId": "spec-case-freya-nolan",
   "name": "Freya Carter",
-  "caseId": null,
   "nhsNumber": "555 666 7771",
   "dateOfBirth": "2014-09-02",
   "relationships": [

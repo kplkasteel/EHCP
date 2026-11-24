@@ -2,7 +2,6 @@
   "id": "spec-case-iris-webb",
   "entityId": "spec-case-iris-webb",
   "name": "Iris Webb",
-  "caseId": null,
   "nhsNumber": "666 777 1110",
   "dateOfBirth": "2013-12-05",
   "relationships": [

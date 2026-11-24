@@ -2,7 +2,6 @@
   "id": "spec-case-hugo-marsh",
   "entityId": "spec-case-hugo-marsh",
   "name": "Hugo Marsh",
-  "caseId": null,
   "nhsNumber": "555 666 7782",
   "dateOfBirth": "2013-04-17",
   "relationships": [

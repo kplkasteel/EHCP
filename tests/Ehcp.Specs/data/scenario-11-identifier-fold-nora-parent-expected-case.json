@@ -2,7 +2,6 @@
   "id": "spec-case-nora-field",
   "entityId": "spec-case-nora-field",
   "name": "Nora Field",
-  "caseId": null,
   "nhsNumber": "777 888 1112",
   "dateOfBirth": "2014-06-20",
   "relationships": [

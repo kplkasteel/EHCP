@@ -2,7 +2,6 @@
   "id": "spec-case-lena-frost",
   "entityId": "spec-case-lena-frost",
   "name": "Lena Frost",
-  "caseId": null,
   "nhsNumber": "555 666 7793",
   "dateOfBirth": "2012-11-23",
   "relationships": [

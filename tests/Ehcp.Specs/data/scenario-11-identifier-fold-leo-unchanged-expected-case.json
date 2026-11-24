@@ -2,7 +2,6 @@
   "id": "spec-case-leo-grant",
   "entityId": "spec-case-leo-grant",
   "name": "Leo Grant",
-  "caseId": null,
   "nhsNumber": "666 777 9990",
   "dateOfBirth": "2015-03-08",
   "relationships": [

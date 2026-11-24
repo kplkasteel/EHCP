@@ -9,7 +9,6 @@
       "name": {{childName:json}},
       "status": "{{expectedStatus}}",
       "nhsNumber": {{nhsNumber:json}},
-      "caseId": null,
       "dateOfBirth": {{dateOfBirth:json}},
       "matchedCaseId": {{expectedCaseId:json}},
       "possibleCaseMatches": {{expectedMatches}},
