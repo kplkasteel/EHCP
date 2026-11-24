@@ -54,9 +54,10 @@ function Get-ToolInstallRow {
 }
 
 $buildTime = if ($summary.build_duration_s) { "$($summary.build_duration_s) s" } else { '' }
+$warnCount = [int]$summary.build_warning_count
 $buildRow = switch ($summary.build) {
-  'passed' { "| Build | ✅ Passed | | | | $buildTime |" }
-  'failed' { "| Build | ❌ Failed | | | | $buildTime |" }
+  'passed' { if ($warnCount -gt 0) { "| Build | ⚠️ Passed with $warnCount warning(s) | | | | $buildTime |" } else { "| Build | ✅ | | | | $buildTime |" } }
+  'failed' { "| Build | ❌ | | | | $buildTime |" }
   default  { '| Build | ⚠️ Not run | | | | |' }
 }
 $toolRows = @(Get-ToolInstallRow)
@@ -77,6 +78,19 @@ if ($failing) {
   $lines += ''
   $lines += '**Failing tests**'
   $lines += $failing | Select-Object -First 20 | ForEach-Object { "- $_" }
+}
+# Build errors and warnings: shown with their count, capped at 20 lines each.
+foreach ($section in @(
+  @{ Title = 'Build errors'; Items = $summary.build_errors; Count = $summary.build_error_count },
+  @{ Title = 'Build warnings'; Items = $summary.build_warnings; Count = $summary.build_warning_count }
+)) {
+  $items = @($section.Items | Where-Object { $_ })
+  if ($items.Count -eq 0) { continue }
+  $lines += ''
+  $lines += "**$($section.Title)**"
+  $lines += $items | Select-Object -First 20 | ForEach-Object { "- $_" }
+  $more = [int]$section.Count - 20
+  if ($more -gt 0) { $lines += "- ...and $more more" }
 }
 $lines += ''
 $prUrl = "$($env:SYSTEM_COLLECTIONURI)$($env:SYSTEM_TEAMPROJECT)/_git/$($env:BUILD_REPOSITORY_NAME)/pullrequest/$($env:SYSTEM_PULLREQUEST_PULLREQUESTID)"

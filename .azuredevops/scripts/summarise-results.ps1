@@ -47,10 +47,22 @@ if (Test-Path $buildLog) {
   }
 }
 
+# Build warnings and errors from the dotnet logs. Each distinct line is kept once.
+$diagnostics = @(foreach ($name in 'restore.log', 'build.log') {
+  $path = Join-Path (Split-Path $OutFile) "build\$name"
+  if (Test-Path $path) { Select-String -Path $path -Pattern ': (warning|error) [A-Za-z]+\d+' | ForEach-Object { $_.Line.Trim() } }
+}) | Select-Object -Unique
+$buildWarnings = @($diagnostics | Where-Object { $_ -match ': warning ' })
+$buildErrors = @($diagnostics | Where-Object { $_ -match ': error ' })
+
 $summary = [ordered]@{
   overall = $overall
   build   = $build
   build_duration_s = $buildSeconds
+  build_warning_count = $buildWarnings.Count
+  build_warnings = @($buildWarnings | Select-Object -First 20)
+  build_error_count = $buildErrors.Count
+  build_errors = @($buildErrors | Select-Object -First 20)
   unit    = Get-RunSummary -Folder (Join-Path $PSScriptRoot '..\..\tests\Ehcp.Tests\TestResults')
   specs   = Get-RunSummary -Folder (Join-Path $PSScriptRoot '..\..\tests\Ehcp.Specs\TestResults')
 }
